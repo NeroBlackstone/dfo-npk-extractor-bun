@@ -1,0 +1,13 @@
+{
+	"name": "dfo-npk-extractor-bun",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"devDependencies": {
+		"@biomejs/biome": "2.4.9",
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^6.0.2"
+	}
+}
