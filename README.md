@@ -130,25 +130,25 @@ function decryptPath(encryptedData: Uint8Array, key: Uint8Array): string {
 
 ## API
 
-### NpkFile
+### 读取 NPK 文件
 
 ```typescript
-import { NpkFile } from './src/npk/index.ts';
+import { readNpk, readNpkFile, NpkAlbum } from './src/npk/index.ts';
 ```
 
-#### 构造函数
+#### 函数
 
 ```typescript
-new NpkFile(filePath: string): NpkFile
+// 从文件路径读取
+readNpkFile(path: string): NpkAlbum[]
+
+// 从 Buffer 读取
+readNpk(buffer: Buffer): NpkAlbum[]
 ```
 
-#### 属性
+#### NpkAlbum 类
 
-| 属性 | 类型 | 说明 |
-|------|------|------|
-| `albums` | `NpkAlbum[]` | 目录列表 |
-
-**NpkAlbum 结构:**
+**属性:**
 
 | 属性 | 类型 | 说明 |
 |------|------|------|
@@ -156,37 +156,46 @@ new NpkFile(filePath: string): NpkFile
 | `length` | `number` | 文件长度 |
 | `path` | `string` | 解密后的路径 |
 
-#### 方法
+**方法:**
 
 ```typescript
-npk.getAlbumData(path: string): Buffer | null
+// 获取原始数据
+getData(): Buffer
+
+// 获取 ImgHeader
+getHeader(): ImgHeader | null
+
+// 获取所有 Sprite 条目
+getSprites(): SpriteEntry[]
+
+// 获取 Sprite 数据
+getSpriteData(index: number): Buffer | null
 ```
-
-根据路径获取Album的原始数据。
-
-#### 属性访问器
-
-```typescript
-npk.size: number
-```
-
-获取NPK文件总大小。
 
 #### 示例
 
 ```typescript
-const npk = new NpkFile('test/sprite_monster_screamingcave_apopis.NPK');
+// 从文件读取
+const albums = readNpkFile('test/sprite_monster_screamingcave_apopis.NPK');
 
-// 获取所有Album路径
-for (const album of npk.albums) {
+// 获取所有 Album 路径
+for (const album of albums) {
   console.log(album.path);
 }
 
-// 通过路径获取数据
-const data = npk.getAlbumData('sprite/monster/screamingcave/apopis/apopis.img');
-if (data) {
-  // 处理数据
+// 获取 Album 的 IMG 信息
+const header = album.getHeader();
+if (header) {
+  console.log(`Version: ${header.version}, Count: ${header.count}`);
 }
+
+// 获取所有 Sprite
+for (const sprite of album.getSprites()) {
+  console.log(`Sprite ${sprite.index}: ${sprite.width}x${sprite.height}`);
+}
+
+// 获取 Sprite 数据
+const data = album.getSpriteData(0);
 ```
 
 ---
@@ -195,12 +204,14 @@ if (data) {
 
 ```
 src/
-├── types/
-│   └── npk.ts          # NPK 类型定义
+├── img/
+│   ├── reader.ts       # IMG 文件读取
+│   └── types.ts        # IMG 类型定义
 ├── utils/
 │   └── crypto.ts       # XOR 加密/解密工具
 └── npk/
-    ├── index.ts        # NpkFile 类，对外接口
+    ├── index.ts        # 导出入口
+    ├── album.ts        # NpkAlbum 类
     ├── reader.ts       # NPK 读取核心
     └── npk.test.ts     # 单元测试
 ```
