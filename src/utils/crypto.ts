@@ -1,5 +1,3 @@
-import { KEY_HEADER } from "../types/npk";
-
 /** XOR密钥缓存 */
 let _key: Uint8Array | null = null;
 
@@ -8,6 +6,9 @@ let _key: Uint8Array | null = null;
  * 算法来源: NpkCoder.cs:30-44
  */
 export function generateKey(): Uint8Array {
+	/** XOR加密密钥头部 */
+	const KEY_HEADER = "puchikon@neople dungeon and fighter ";
+
 	if (_key) return _key;
 
 	const key = new Uint8Array(256);
