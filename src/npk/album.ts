@@ -1,3 +1,4 @@
+import { decodeSpriteData } from "../img/decoder";
 import { readImgHeader, readSpriteEntries } from "../img/reader";
 import type { ImgHeader, SpriteEntry } from "../img/types";
 import { ColorBits } from "../img/types";
@@ -84,5 +85,20 @@ export class NpkAlbum {
 			return null;
 		}
 		return imgData.subarray(offset, offset + len);
+	}
+
+	/**
+	 * 解码Sprite数据
+	 */
+	decodeSpriteData(index: number): Buffer | null {
+		const sprite = this._sprites[index];
+		if (!sprite) {
+			return null;
+		}
+		const rawData = this.getSpriteData(index);
+		if (!rawData) {
+			return null;
+		}
+		return decodeSpriteData(rawData, sprite);
 	}
 }
