@@ -1,6 +1,17 @@
 # dfo-npk-extractor-bun
 
-DNF  NPK 跨平台资源包解析器。将 .npk 文件转换为 PNG 图片。
+NPK 跨平台资源包解析器。将 .npk 文件转换为 PNG 图片。
+
+## Disclaimer
+
+This project is intended for educational and research purposes only.
+
+- Do NOT use extracted assets for commercial purposes.
+- Do NOT redistribute game assets.
+- All game resources belong to their respective copyright holders (e.g. Neople/Nexon).
+- Users are responsible for complying with applicable laws and game EULA.
+
+If you are a copyright holder and believe this project violates your rights, please contact for removal.
 
 ## 安装
 
