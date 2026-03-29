@@ -1,5 +1,6 @@
 {
 	"name": "dfo-npk-extractor-bun",
+	"version": "0.2.0",
 	"module": "index.ts",
 	"type": "module",
 	"private": true,

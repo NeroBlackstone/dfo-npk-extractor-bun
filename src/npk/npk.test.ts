@@ -1,8 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { IMG_FLAG } from "../img/types";
+import { ColorBits, CompressMode, IMG_FLAG, ImgVersion } from "../img/types";
 import { decryptPath, encryptPath, generateKey } from "../utils/crypto";
 import { readNpk, readNpkFile } from "./index";
+
+// 测试文件说明:
+// - sprite_monster_screamingcave_apopis.NPK: Ver2 格式，ARGB_1555 + ZLIB
+// - sprite_character_swordman_atequipment_avatar_skin.NPK: Ver4 格式，带调色板
 
 describe("crypto utilities", () => {
 	test("generateKey should return 256 bytes key", () => {
@@ -49,7 +53,7 @@ describe("NPK structure", () => {
 	});
 });
 
-describe("readNpk", () => {
+describe("readNpk Ver2 (sprite_monster_screamingcave_apopis.NPK)", () => {
 	const npkPath = "test/sprite_monster_screamingcave_apopis.NPK";
 	const albums = readNpkFile(npkPath);
 
@@ -73,12 +77,13 @@ describe("readNpk", () => {
 		expect(data.length).toBe(album.length);
 	});
 
-	test("getHeader should return ImgHeader", () => {
+	test("getHeader should return ImgHeader with Ver2", () => {
 		const album = albums[0];
 		if (!album) return;
 		const header = album.getHeader();
 		expect(header).toBeTruthy();
 		expect(header?.flag).toBe(IMG_FLAG);
+		expect(header?.version).toBe(ImgVersion.Ver2);
 		expect(header?.count).toBeGreaterThan(0);
 	});
 
@@ -89,6 +94,17 @@ describe("readNpk", () => {
 		if (!header) return;
 		const sprites = album.getSprites();
 		expect(sprites.length).toBe(header.count);
+	});
+
+	test("Ver2 sprites should be ARGB_1555 with ZLIB compression", () => {
+		const album = albums[0];
+		if (!album) return;
+		const sprites = album.getSprites();
+		// 找到第一个非 LINK 的 sprite
+		const sprite = sprites.find((s) => s.type !== ColorBits.LINK);
+		if (!sprite) return;
+		expect(sprite.type).toBe(ColorBits.ARGB_1555);
+		expect(sprite.compressMode).toBe(CompressMode.ZLIB);
 	});
 
 	test("getSpriteData should return sprite data by index", () => {
@@ -102,9 +118,113 @@ describe("readNpk", () => {
 		expect(data?.length).toBe(sprite0?.length);
 	});
 
+	test("decodeSpriteData should decode to ARGB_8888", () => {
+		const album = albums[0];
+		if (!album) return;
+		const sprites = album.getSprites();
+		// 找到第一个非 LINK 的 sprite
+		const spriteIdx = sprites.findIndex((s) => s.type !== ColorBits.LINK);
+		if (spriteIdx < 0) return;
+		const sprite = sprites[spriteIdx];
+		if (!sprite) return;
+
+		const decoded = album.decodeSpriteData(spriteIdx);
+		expect(decoded).toBeTruthy();
+
+		// ARGB_8888: 4 bytes per pixel
+		const expectedSize = (sprite.width ?? 0) * (sprite.height ?? 0) * 4;
+		expect(decoded?.length).toBe(expectedSize);
+	});
+
 	test("readNpk should work with Buffer", () => {
 		const buffer = readFileSync(npkPath);
 		const albumsFromBuffer = readNpk(buffer);
 		expect(albumsFromBuffer.length).toBe(albums.length);
+	});
+});
+
+describe("readNpk Ver4 (sprite_character_swordman_atequipment_avatar_skin.NPK)", () => {
+	const npkPath = "test/sprite_character_swordman_atequipment_avatar_skin.NPK";
+	const albums = readNpkFile(npkPath);
+
+	test("should read NPK from file path", () => {
+		expect(albums.length).toBeGreaterThan(0);
+	});
+
+	test("getHeader should return ImgHeader with Ver4", () => {
+		const album = albums[0];
+		if (!album) return;
+		const header = album.getHeader();
+		expect(header).toBeTruthy();
+		expect(header?.flag).toBe(IMG_FLAG);
+		expect(header?.version).toBe(ImgVersion.Ver4);
+		expect(header?.count).toBeGreaterThan(0);
+	});
+
+	test("Ver4 sprites should have palette-based format", () => {
+		const album = albums[0];
+		if (!album) return;
+		const sprites = album.getSprites();
+		// 找到第一个非 LINK 的 sprite
+		const sprite = sprites.find((s) => s.type !== ColorBits.LINK);
+		if (!sprite) return;
+		// Ver4 的 ARGB_1555 + ZLIB 是调色板索引格式
+		expect(sprite.type).toBe(ColorBits.ARGB_1555);
+		expect(sprite.compressMode).toBe(CompressMode.ZLIB);
+	});
+
+	test("decodeSpriteData should handle Ver4 palette conversion", () => {
+		const album = albums[0];
+		if (!album) return;
+		const sprites = album.getSprites();
+		// 找到第一个非 LINK 的 sprite
+		const spriteIdx = sprites.findIndex((s) => s.type !== ColorBits.LINK);
+		if (spriteIdx < 0) return;
+		const sprite = sprites[spriteIdx];
+		if (!sprite) return;
+
+		const decoded = album.decodeSpriteData(spriteIdx);
+		expect(decoded).toBeTruthy();
+
+		// 解码后应该是 ARGB_8888 格式: 4 bytes per pixel
+		const expectedSize = (sprite.width ?? 0) * (sprite.height ?? 0) * 4;
+		expect(decoded?.length).toBe(expectedSize);
+	});
+
+	test("multiple albums should have correct offsets", () => {
+		// Ver4 NPK 可能包含多个 album，每个都正确解析
+		expect(albums.length).toBeGreaterThan(0);
+		for (const album of albums) {
+			const header = album.getHeader();
+			expect(header).toBeTruthy();
+			expect(header?.version).toBe(ImgVersion.Ver4);
+		}
+	});
+});
+
+describe("IMG versions", () => {
+	test("ImgVersion enum should have correct values", () => {
+		expect(ImgVersion.Other).toBe(0x00);
+		expect(ImgVersion.Ver1).toBe(0x01);
+		expect(ImgVersion.Ver2).toBe(0x02);
+		expect(ImgVersion.Ver4).toBe(0x04);
+		expect(ImgVersion.Ver5).toBe(0x05);
+		expect(ImgVersion.Ver6).toBe(0x06);
+	});
+
+	test("ColorBits enum should have correct values", () => {
+		expect(ColorBits.ARGB_1555).toBe(0x0e);
+		expect(ColorBits.ARGB_4444).toBe(0x0f);
+		expect(ColorBits.ARGB_8888).toBe(0x10);
+		expect(ColorBits.LINK).toBe(0x11);
+		expect(ColorBits.DXT_1).toBe(0x12);
+		expect(ColorBits.DXT_3).toBe(0x13);
+		expect(ColorBits.DXT_5).toBe(0x14);
+	});
+
+	test("CompressMode enum should have correct values", () => {
+		expect(CompressMode.NONE).toBe(0x05);
+		expect(CompressMode.ZLIB).toBe(0x06);
+		expect(CompressMode.DDS_ZLIB).toBe(0x07);
 	});
 });

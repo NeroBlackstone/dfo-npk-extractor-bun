@@ -40,6 +40,7 @@ export function readNpk(buffer: Buffer): NpkAlbum[] {
 			new Uint8Array(buffer.subarray(base + 8, base + 264)),
 			key,
 		);
+
 		// 切片出该Album的数据
 		const data = buffer.subarray(offset, offset + length);
 		albums.push(new NpkAlbum(offset, length, path, data));

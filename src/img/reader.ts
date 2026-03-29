@@ -42,14 +42,18 @@ export function readImgHeader(buffer: Buffer): ImgHeader {
  * 每个Sprite Entry:
  * - LINK类型: 2个int (8字节) - type和target index
  * - 非LINK类型: 9个int (36字节)
+ *
+ * @param buffer IMG数据缓冲区
+ * @param header IMG文件头
+ * @param spriteEntriesStart sprite条目区域的起始偏移（默认32，Ver4需要加上调色板偏移）
  */
 export function readSpriteEntries(
 	buffer: Buffer,
 	header: ImgHeader,
+	spriteEntriesStart: number = 32,
 ): SpriteEntry[] {
 	const sprites: SpriteEntry[] = [];
-	// Sprite索引区从偏移32开始
-	let offset = 32;
+	let offset = spriteEntriesStart;
 
 	for (let i = 0; i < header.count; i++) {
 		const base = offset;
