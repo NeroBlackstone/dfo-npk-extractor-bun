@@ -1,6 +1,6 @@
 # dfo-npk-extractor-bun
 
-DNF (地下城与勇士) NPK 跨平台资源包解析器。将 .npk 文件转换为 PNG 图片。
+DNF  NPK 跨平台资源包解析器。将 .npk 文件转换为 PNG 图片。
 
 ## 安装
 
