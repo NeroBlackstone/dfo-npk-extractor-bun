@@ -53,8 +53,8 @@ describe("NPK structure", () => {
 	});
 });
 
-describe("readNpk Ver2 (sprite_monster_screamingcave_apopis.NPK)", () => {
-	const npkPath = "test/sprite_monster_screamingcave_apopis.NPK";
+describe("readNpk Ver2 (sprite_test_ver2.NPK)", () => {
+	const npkPath = "test/sprite_test_ver2.NPK";
 	const albums = readNpkFile(npkPath);
 
 	test("should read NPK from file path", () => {
@@ -143,8 +143,8 @@ describe("readNpk Ver2 (sprite_monster_screamingcave_apopis.NPK)", () => {
 	});
 });
 
-describe("readNpk Ver4 (sprite_character_swordman_atequipment_avatar_skin.NPK)", () => {
-	const npkPath = "test/sprite_character_swordman_atequipment_avatar_skin.NPK";
+describe("readNpk Ver4 (sprite_test_ver4.NPK)", () => {
+	const npkPath = "test/sprite_test_ver4.NPK";
 	const albums = readNpkFile(npkPath);
 
 	test("should read NPK from file path", () => {
