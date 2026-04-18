@@ -40,10 +40,10 @@ bun install
 bun run index.ts
 ```
 
-在有npk的目录下执行:
+或者使用构建后的可执行文件（参见 [build/](build/) 目录）:
 
 ```
-./npk-extractor
+./dist/npk-extractor
 ```
 
 输出结构示例：
