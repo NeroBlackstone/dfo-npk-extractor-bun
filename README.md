@@ -13,10 +13,23 @@ This project is intended for educational and research purposes only.
 
 If you are a copyright holder and believe this project violates your rights, please contact for removal.
 
-## 安装
+## 安装依赖
+
+本项目需要 bun.js 运行时。
 
 ```bash
 bun install
+```
+
+
+## 打包
+
+出于法律风险上的考量，本项目不提供可执行的程序，推荐安装bun运行时并手动构建可执行程序。
+
+在拉取了依赖的前提下，执行构建脚本，即可全平台构建:
+
+```
+./build.sh
 ```
 
 ## 使用
@@ -28,7 +41,7 @@ bun install
 bun run index.ts
 ```
 
-或在github下载可执行文件，在有npk的目录下执行:
+在有npk的目录下执行:
 
 ```
 ./npk-extractor
@@ -37,14 +50,6 @@ bun run index.ts
 输出结构示例：
 - 图片：`sprite/monster/screamingcave/apopis/(tn)apopis.img/0.png`
 - 音频：`sounds/test/click.ogg`
-
-## 打包
-
-在拉取了依赖的前提下，执行构建脚本，即可全平台构建:
-
-```
-./build.sh
-```
 
 ## 测试
 
