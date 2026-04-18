@@ -128,4 +128,19 @@ export class NpkAlbum {
 		const palette = this._handler.readPalette(this._data);
 		return this._handler.decodeSprite(sprite, rawData, palette);
 	}
+
+	/**
+	 * 检测是否为音频文件（.ogg 扩展名）
+	 */
+	isAudio(): boolean {
+		return this.path.toLowerCase().endsWith(".ogg");
+	}
+
+	/**
+	 * 获取音频数据（原始 .ogg 字节）
+	 */
+	getAudioData(): Buffer | null {
+		if (!this.isAudio()) return null;
+		return this._data;
+	}
 }

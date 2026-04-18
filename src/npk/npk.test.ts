@@ -228,3 +228,40 @@ describe("IMG versions", () => {
 		expect(CompressMode.DDS_ZLIB).toBe(0x07);
 	});
 });
+
+describe("Audio NPK (test/test_audio.npk)", () => {
+	const npkPath = "test/test_audio.npk";
+	const albums = readNpkFile(npkPath);
+
+	test("should have 2 audio albums", () => {
+		expect(albums.length).toBe(2);
+	});
+
+	test("all albums should be detected as audio", () => {
+		for (const album of albums) {
+			expect(album.isAudio()).toBe(true);
+		}
+	});
+
+	test("getAudioData should return Buffer starting with OggS", () => {
+		const album = albums[0];
+		if (!album) return;
+		const data = album.getAudioData();
+		expect(data).toBeInstanceOf(Buffer);
+		expect(data?.slice(0, 4).toString()).toBe("OggS");
+	});
+
+	test("getHeader should return null for audio", () => {
+		const album = albums[0];
+		if (!album) return;
+		expect(album.getHeader()).toBeNull();
+	});
+
+	test("non-image albums should not be audio", () => {
+		const npkPath2 = "test/sprite_test_ver2.NPK";
+		const imageAlbums = readNpkFile(npkPath2);
+		for (const album of imageAlbums) {
+			expect(album.isAudio()).toBe(false);
+		}
+	});
+});

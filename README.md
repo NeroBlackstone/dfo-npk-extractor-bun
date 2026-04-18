@@ -1,6 +1,6 @@
 # dfo-npk-extractor-bun
 
-NPK 跨平台资源包解析器。将 .npk 文件转换为 PNG 图片。
+NPK 跨平台资源包解析器。将 .npk 文件转换为 PNG 图片和 OGG 音频。
 
 ## Disclaimer
 
@@ -34,7 +34,9 @@ bun run index.ts
 ./npk-extractor
 ```
 
-输出结构：`sprite/monster/screamingcave/apopis/(tn)apopis.img/0.png`
+输出结构示例：
+- 图片：`sprite/monster/screamingcave/apopis/(tn)apopis.img/0.png`
+- 音频：`sounds/test/click.ogg`
 
 ## 打包
 
@@ -54,23 +56,26 @@ bun test
 
 ```
 src/
+├── extract/          # 提取逻辑
+│   └── index.ts      # 音频/图片提取函数
 ├── img/
-│   ├── decoder.ts     # Sprite 数据解码 (Zlib/DDS)
-│   ├── dds.ts         # DDS 格式解码 (DXT1/DXT3/DXT5)
-│   ├── png.ts         # PNG 编码器
-│   ├── reader.ts      # IMG 文件读取
-│   ├── types.ts       # IMG 类型定义
-│   └── versions/      # IMG 版本处理器（策略模式）
-│       ├── base.ts    # VersionHandler 接口定义
-│       ├── ver2.ts    # Ver1/Ver2 处理器
-│       ├── ver4.ts    # Ver4 处理器（含调色板逻辑）
-│       └── index.ts   # 工厂函数
+│   ├── decoder.ts    # Sprite 数据解码 (Zlib/DDS)
+│   ├── dds.ts        # DDS 格式解码 (DXT1/DXT3/DXT5)
+│   ├── png.ts        # PNG 编码器
+│   ├── reader.ts     # IMG 文件读取
+│   ├── types.ts      # IMG 类型定义
+│   └── versions/     # IMG 版本处理器（策略模式）
+│       ├── base.ts   # VersionHandler 接口定义
+│       ├── ver2.ts   # Ver1/Ver2 处理器
+│       ├── ver4.ts   # Ver4 处理器（含调色板逻辑）
+│       └── index.ts  # 工厂函数
 ├── npk/
-│   ├── index.ts       # 导出入口
-│   ├── album.ts       # NpkAlbum 类
-│   └── reader.ts      # NPK 读取核心
+│   ├── index.ts      # 导出入口
+│   ├── album.ts      # NpkAlbum 类（含 isAudio, getAudioData）
+│   └── reader.ts     # NPK 读取核心
 └── utils/
-    └── crypto.ts      # XOR 加密/解密工具
+    ├── crypto.ts     # XOR 加密/解密工具
+    └── file.ts       # 文件操作工具
 ```
 
 ## NPK/IMG 文件格式
@@ -221,6 +226,29 @@ src/
 | 0x06 | ZLIB | Zlib 压缩 |
 | 0x07 | DDS_ZLIB | DDS + Zlib 压缩 |
 
+### 音频文件 (OGG)
+
+NPK 中音频文件以 `.ogg` 结尾，存储在 `sounds/` 目录下：
+
+```
++-------------+------------+
+| album_count | 4 bytes   | 音频文件数量
++-------------+------------+
+| album_entry | 264 bytes | 每个条目同图片格式
++-------------+------------+
+| audio_data  | OGG 流    | 原始 OGG 字节，"OggS" 开头
++-------------+------------+
+```
+
+**OGG 数据特征**：
+- 文件开头为 `OggS` (0x4F 0x67 0x67 0x53)
+- 数据为原始 OGG 字节流，无 IMG 头部
+- 按 album 的 `offset` 和 `length` 直接读取即可
+
+示例 (test/test_audio.npk):
+- 路径格式: `sounds/test/click.ogg`
+- 2 个测试音频文件
+
 ## API
 
 ### 读取 NPK 文件
@@ -229,24 +257,29 @@ src/
 import { readNpk, readNpkFile, NpkAlbum } from './src/npk/index.ts';
 
 // 从文件读取
-const albums = readNpkFile('test/sprite_monster_screamingcave_apopis.NPK');
+const albums = readNpkFile('path/to/file.NPK');
 
 // 获取所有 Album 路径
 for (const album of albums) {
   console.log(album.path);
 }
 
-// 获取 Album 的 IMG 信息
-const header = album.getHeader();
-if (header) {
-  console.log(`Version: ${header.version}, Count: ${header.count}`);
-}
+// 检测是否为音频文件
+if (album.isAudio()) {
+  const audioData = album.getAudioData(); // 原始 OGG 字节
+} else {
+  // 图片文件
+  const header = album.getHeader();
+  if (header) {
+    console.log(`Version: ${header.version}, Count: ${header.count}`);
+  }
 
-// 获取所有 Sprite
-for (const sprite of album.getSprites()) {
-  console.log(`Sprite ${sprite.index}: ${sprite.width}x${sprite.height}`);
-}
+  // 获取所有 Sprite
+  for (const sprite of album.getSprites()) {
+    console.log(`Sprite ${sprite.index}: ${sprite.width}x${sprite.height}`);
+  }
 
-// 获取 Sprite 数据
-const data = album.getSpriteData(0);
+  // 获取 Sprite 数据
+  const data = album.getSpriteData(0);
+}
 ```
