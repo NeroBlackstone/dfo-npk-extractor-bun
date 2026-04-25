@@ -58,6 +58,7 @@ export function extractSprite(
 		frameWidth: sourceSprite.frameWidth ?? 0,
 		frameHeight: sourceSprite.frameHeight ?? 0,
 		npkFile: npkFile,
+		imgName: album.path,
 	};
 
 	try {

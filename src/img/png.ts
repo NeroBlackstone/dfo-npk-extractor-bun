@@ -82,6 +82,7 @@ function buildMetadataChunks(metadata?: SpriteMetadata): Buffer[] {
 		["SpriteFrameWidth", metadata.frameWidth],
 		["SpriteFrameHeight", metadata.frameHeight],
 		["NpkFile", metadata.npkFile],
+		["ImgName", metadata.imgName],
 	];
 	return fields.map(([keyword, value]) =>
 		makeTextChunk(keyword, String(value)),

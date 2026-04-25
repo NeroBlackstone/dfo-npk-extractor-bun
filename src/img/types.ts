@@ -84,4 +84,5 @@ export interface SpriteMetadata {
 	frameWidth: number;
 	frameHeight: number;
 	npkFile: string;
+	imgName: string;
 }

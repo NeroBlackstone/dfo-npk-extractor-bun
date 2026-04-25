@@ -33,11 +33,15 @@ bun install
 
 ## 使用
 
-1. 将 `.npk` 文件放到工作目录
-2. 执行：
-
 ```bash
+# 扫描当前目录下的所有 .npk 文件
 bun run index.ts
+
+# 指定 NPK 文件（必须放在最后）
+bun run index.ts sprite_character_swordman_equipment_avatar_skin.NPK
+
+# 配合 --link 模式（--link 放在前面，NPK 文件放在最后）
+bun run index.ts --link sprite_character_swordman_equipment_avatar_skin.NPK
 ```
 
 或者使用构建后的可执行文件（参见 [build/](build/) 目录）:
@@ -54,6 +58,7 @@ bun run index.ts
 
 | 参数 | 说明 |
 |------|------|
+| `file.NPK` | 指定要处理的 NPK 文件路径（**必须放在最后**，可选，默认为当前目录） |
 | `--link` | 启用 LINK 帧映射模式（见下文） |
 
 ## LINK 帧处理
@@ -83,7 +88,9 @@ bun run index.ts --link
 生成的文件结构：
 
 - PNG：仅包含非 LINK 帧
-- JSON：`{imgPath}.links.json`，记录 LINK 帧映射关系
+- JSON：`{imgDir}/{basename}.links.json`，记录 LINK 帧映射关系
+
+例如：`sprite/character/swordman/equipment/avatar/skin/sm_body0000.img/sm_body0000.img.links.json`
 
 **JSON 格式：**
 
@@ -91,7 +98,7 @@ bun run index.ts --link
 {
   "source": {
     "npk": "sprite_character_swordman_equipment_avatar_skin.NPK",
-    "img": "sm_body0000.img"
+    "img": "sprite/character/swordman/equipment/avatar/skin/sm_body0000.img"
   },
   "links": {
     "21": 10,
@@ -116,6 +123,7 @@ bun run index.ts --link
 | SpriteFrameWidth | 帧宽度 | 64 |
 | SpriteFrameHeight | 帧高度 | 64 |
 | NpkFile | 来源NPK文件名 | character.NPK |
+| ImgName | 来源IMG路径 | sprite/monster/boss.img |
 
 ## 测试
 
