@@ -50,6 +50,19 @@ bun run index.ts
 - 图片：`sprite/monster/screamingcave/apopis/(tn)apopis.img/0.png`
 - 音频：`sounds/test/click.ogg`
 
+## PNG元数据
+
+导出的 PNG 图片会通过 tEXt 块记录精灵的元数据信息，可用 `pngcheck`、`exiftool` 或图像编辑软件查看：
+
+| 关键字 | 说明 | 示例值 |
+|--------|------|--------|
+| SpriteX | X偏移量 | 100 |
+| SpriteY | Y偏移量 | 50 |
+| SpriteWidth | 精灵宽度 | 64 |
+| SpriteHeight | 精灵高度 | 64 |
+| SpriteFrameWidth | 帧宽度 | 64 |
+| SpriteFrameHeight | 帧高度 | 64 |
+
 ## 测试
 
 ```
