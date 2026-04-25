@@ -1,7 +1,10 @@
+import { writeFileSync } from "node:fs";
+import { createPng } from "../img/png";
 import { readImgHeader, readSpriteEntries } from "../img/reader";
-import type { SpriteEntry } from "../img/types";
+import type { SpriteEntry, SpriteMetadata } from "../img/types";
 import { ColorBits, CompressMode } from "../img/types";
 import { getHandler, getSpriteEntriesStart } from "../img/versions";
+import { ensureDir } from "../utils/file";
 
 /**
  * NPK文件中的单个Album条目
@@ -15,20 +18,25 @@ export class NpkAlbum {
 	private readonly _handler;
 	/** 原始数据 */
 	private readonly _data;
+	/** 来源NPK文件名 */
+	private readonly _npkFile: string;
 
 	/**
 	 * @param offset 文件偏移
 	 * @param length 文件长度
 	 * @param path 解密后的路径
 	 * @param data 该Album的数据
+	 * @param npkFile 来源NPK文件名
 	 */
 	constructor(
 		public readonly offset: number,
 		public readonly length: number,
 		public readonly path: string,
 		data: Buffer,
+		npkFile: string,
 	) {
 		this._data = data;
+		this._npkFile = npkFile;
 		try {
 			this._header = readImgHeader(data);
 			this._handler = getHandler(this._header.version);
@@ -145,6 +153,19 @@ export class NpkAlbum {
 	}
 
 	/**
+	 * 导出音频文件到指定目录
+	 */
+	extractAudio(outputBase: string): boolean {
+		const audioData = this.getAudioData();
+		if (!audioData) return false;
+
+		const relativePath = `${outputBase}/${this.path}`;
+		ensureDir(relativePath.substring(0, relativePath.lastIndexOf("/")));
+		writeFileSync(relativePath, audioData);
+		return true;
+	}
+
+	/**
 	 * 获取 LINK 帧映射
 	 * @returns 存在 LINK 时返回 index->target 映射，否则返回 null
 	 */
@@ -164,5 +185,56 @@ export class NpkAlbum {
 			return null;
 		}
 		return links;
+	}
+
+	/**
+	 * 导出所有图片 sprites 到文件
+	 */
+	extractSprites(outputBase: string, skipLinkSprites?: boolean): number {
+		let savedCount = 0;
+		for (let i = 0; i < this._sprites.length; i++) {
+			const sprite = this._sprites[i];
+			if (!sprite) continue;
+
+			if (skipLinkSprites && sprite.type === ColorBits.LINK) {
+				continue;
+			}
+
+			const linkTarget =
+				sprite.type === ColorBits.LINK ? sprite.target : undefined;
+			const sourceSprite =
+				linkTarget !== undefined ? this._sprites[linkTarget] : sprite;
+			const sourceIndex = linkTarget !== undefined ? linkTarget : i;
+
+			if (!sourceSprite) continue;
+
+			const decodedData = this.decodeSpriteData(sourceIndex);
+			if (!decodedData) continue;
+
+			const width = sourceSprite.width;
+			const height = sourceSprite.height;
+			if (!width || !height) continue;
+
+			const relativePath = `${outputBase}/${this.path}/${i}.png`;
+			ensureDir(relativePath.substring(0, relativePath.lastIndexOf("/")));
+
+			const metadata: SpriteMetadata = {
+				x: sourceSprite.x ?? 0,
+				y: sourceSprite.y ?? 0,
+				frameWidth: sourceSprite.frameWidth ?? 0,
+				frameHeight: sourceSprite.frameHeight ?? 0,
+				npkFile: this._npkFile,
+				imgName: this.path,
+			};
+
+			try {
+				const png = createPng(decodedData, width, height, metadata);
+				writeFileSync(relativePath, png);
+				savedCount++;
+			} catch {
+				// skip error
+			}
+		}
+		return savedCount;
 	}
 }

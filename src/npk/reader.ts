@@ -7,14 +7,15 @@ import { NpkAlbum } from "./album";
  */
 export function readNpkFile(path: string): NpkAlbum[] {
 	const buffer = readFileSync(path);
-	return readNpk(buffer);
+	const npkFile = path;
+	return readNpk(buffer, npkFile);
 }
 
 /**
  * 读取NPK文件头部和目录区
  * 算法来源: NpkCoder.cs:119-134 (ReadInfo) 和 NpkCoder.cs:142-164 (ReadNpk)
  */
-export function readNpk(buffer: Buffer): NpkAlbum[] {
+export function readNpk(buffer: Buffer, npkFile: string): NpkAlbum[] {
 	// 1. 验证NPK标志 (16字节)
 	const flag = buffer.subarray(0, 16).toString("ascii").replace(/\0/g, "");
 	const NPK_FLAG = "NeoplePack_Bill";
@@ -43,7 +44,7 @@ export function readNpk(buffer: Buffer): NpkAlbum[] {
 
 		// 切片出该Album的数据
 		const data = buffer.subarray(offset, offset + length);
-		albums.push(new NpkAlbum(offset, length, path, data));
+		albums.push(new NpkAlbum(offset, length, path, data, npkFile));
 	}
 
 	return albums;

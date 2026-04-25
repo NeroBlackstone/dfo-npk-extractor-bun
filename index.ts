@@ -1,10 +1,6 @@
 import { readdirSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import { parseArgs } from "node:util";
-import {
-	extractAudioFromAlbums,
-	extractSpritesFromAlbums,
-} from "./src/extract/index";
 import { readNpkFile } from "./src/npk/index";
 import { ensureDir } from "./src/utils/file";
 
@@ -49,37 +45,53 @@ let totalSprites = 0;
 
 for (const npkFile of npkFiles) {
 	const albums = readNpkFile(npkFile);
-	totalAudio += extractAudioFromAlbums(albums);
+	const audioPaths: string[] = [];
+	let npkSprites = 0;
 
-	const imageAlbums = albums.filter((a) => !a.isAudio());
+	for (const album of albums) {
+		if (album.isAudio()) {
+			if (album.extractAudio(OUTPUT_BASE)) {
+				totalAudio++;
+				audioPaths.push(album.path);
+			}
+		} else {
+			if (linkMode) {
+				const links = album.getLinks();
+				if (links) {
+					const jsonPath = `${OUTPUT_BASE}/${album.path}/${basename(album.path)}.links.json`;
+					ensureDir(jsonPath.substring(0, jsonPath.lastIndexOf("/")));
+					writeFileSync(
+						jsonPath,
+						JSON.stringify(
+							{
+								source: { npk: npkFile, img: album.path },
+								links,
+							},
+							null,
+							2,
+						),
+					);
+				}
+			}
 
-	if (linkMode) {
-		for (const album of imageAlbums) {
-			const links = album.getLinks();
-			if (!links) continue;
-
-			const jsonPath = `${OUTPUT_BASE}/${album.path}/${basename(album.path)}.links.json`;
-			ensureDir(jsonPath.substring(0, jsonPath.lastIndexOf("/")));
-			writeFileSync(
-				jsonPath,
-				JSON.stringify(
-					{
-						source: { npk: npkFile, img: album.path },
-						links,
-					},
-					null,
-					2,
-				),
-			);
+			npkSprites += album.extractSprites(OUTPUT_BASE, linkMode);
 		}
 	}
 
-	totalSprites += extractSpritesFromAlbums(
-		imageAlbums,
-		OUTPUT_BASE,
-		npkFile,
-		linkMode,
-	);
+	// 写入元数据文件到 OGG 同目录（仅 --link 模式）
+	if (linkMode) {
+		const firstOgg = audioPaths[0];
+		if (firstOgg) {
+			const firstOggDir = firstOgg.substring(0, firstOgg.lastIndexOf("/"));
+			const npkBaseName = npkFile.replace(/.*\//, "").replace(".npk", "");
+			const metaPath = `${OUTPUT_BASE}/${firstOggDir}/${npkBaseName}.npk.json`;
+			ensureDir(metaPath.substring(0, metaPath.lastIndexOf("/")));
+			writeFileSync(metaPath, JSON.stringify({ npkFile, sounds: audioPaths }, null, 2));
+		}
+	}
+
+	console.log(`[${npkFile}] ${audioPaths.length} audio, ${npkSprites} sprites`);
+	totalSprites += npkSprites;
 }
 
 console.log(

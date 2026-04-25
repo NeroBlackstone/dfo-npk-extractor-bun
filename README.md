@@ -112,6 +112,29 @@ bun run index.ts --link
 - `source.img`：IMG 文件路径
 - `links`：LINK 映射，`key` 为 LINK 帧索引，`value` 为目标帧索引
 
+## 音频元数据
+
+`--link` 模式下，导出的 OGG 音频会生成对应的元数据 JSON 文件。
+
+**文件位置：** `{oggDir}/{npkBaseName}.npk.json`
+
+例如：`sounds/amb/sounds_amb.npk.json`
+
+**JSON 格式：**
+
+```json
+{
+  "npkFile": "dist/sounds_amb.npk",
+  "sounds": [
+    "sounds/amb/amb_cave_01.ogg",
+    "sounds/amb/amb_cave_02.ogg"
+  ]
+}
+```
+
+- `npkFile`：来源 NPK 文件路径
+- `sounds`：该 NPK 导出的所有 OGG 文件路径列表
+
 ## PNG元数据
 
 导出的 PNG 图片会通过 tEXt 块记录精灵的元数据信息，可用 `pngcheck`、`exiftool` 或图像编辑软件查看：

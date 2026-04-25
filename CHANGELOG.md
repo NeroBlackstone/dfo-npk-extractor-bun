@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.0
+
+- `--link` 模式下新增音频元数据 JSON，记录来源 NPK 和 OGG 文件列表
+
 ## v0.3.0
 
 - 添加 `--link` 模式，生成 LINK 帧映射文件
