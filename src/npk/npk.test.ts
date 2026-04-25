@@ -136,6 +136,51 @@ describe("readNpk Ver2 (sprite_test_ver2.NPK)", () => {
 		expect(decoded?.length).toBe(expectedSize);
 	});
 
+	test("should have LINK sprite at index 1", () => {
+		const album = albums[0];
+		if (!album) return;
+		const sprites = album.getSprites();
+		// sprite_test_ver2.NPK 有 3 个 sprites: [0] 正常, [1] LINK->0, [2] 正常
+		expect(sprites.length).toBe(3);
+		const linkSprite = sprites[1];
+		expect(linkSprite).toBeTruthy();
+		expect(linkSprite.type).toBe(ColorBits.LINK);
+	});
+
+	test("LINK sprite should have correct target index", () => {
+		const album = albums[0];
+		if (!album) return;
+		const sprites = album.getSprites();
+		const linkSprite = sprites[1];
+		expect(linkSprite.target).toBe(0); // LINK -> sprite 0
+	});
+
+	test("LINK sprite should return null from getSpriteData", () => {
+		const album = albums[0];
+		if (!album) return;
+		const data = album.getSpriteData(1); // LINK sprite
+		expect(data).toBeNull();
+	});
+
+	test("LINK sprite should return null from decodeSpriteData", () => {
+		const album = albums[0];
+		if (!album) return;
+		const decoded = album.decodeSpriteData(1); // LINK sprite
+		expect(decoded).toBeNull();
+	});
+
+	test("LINK sprite target should have valid data", () => {
+		const album = albums[0];
+		if (!album) return;
+		const sprites = album.getSprites();
+		const linkSprite = sprites[1];
+		if (linkSprite.type !== ColorBits.LINK) return;
+		const targetIdx = linkSprite.target;
+		if (targetIdx === undefined) return;
+		const targetData = album.decodeSpriteData(targetIdx);
+		expect(targetData).toBeTruthy();
+	});
+
 	test("readNpk should work with Buffer", () => {
 		const buffer = readFileSync(npkPath);
 		const albumsFromBuffer = readNpk(buffer);

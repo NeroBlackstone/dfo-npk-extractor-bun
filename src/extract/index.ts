@@ -1,9 +1,8 @@
 import { writeFileSync } from "node:fs";
-import { basename } from "node:path";
 import { createPng } from "../img/png";
 import type { SpriteMetadata } from "../img/types";
+import { ColorBits } from "../img/types";
 import type { NpkAlbum } from "../npk/album";
-import { readNpkFile } from "../npk/index";
 import { ensureDir } from "../utils/file";
 
 /**
@@ -20,6 +19,11 @@ export function extractAudio(album: NpkAlbum): boolean {
 
 /**
  * 提取单个图片 Sprite
+ * @param album NPK album
+ * @param spriteIndex sprite 索引
+ * @param outputBase 输出目录
+ * @param npkFile NPK 文件名
+ * @returns boolean
  */
 export function extractSprite(
 	album: NpkAlbum,
@@ -31,24 +35,28 @@ export function extractSprite(
 	const sprite = sprites[spriteIndex];
 	if (!sprite) return false;
 
-	// Skip LINK type
-	if (sprite.type === 0x11) return false;
+	// LINK 类型解析为目标 sprite
+	const linkTarget = sprite.type === ColorBits.LINK ? sprite.target : undefined;
+	const sourceSprite = linkTarget !== undefined ? sprites[linkTarget] : sprite;
+	const sourceIndex = linkTarget !== undefined ? linkTarget : spriteIndex;
 
-	const decodedData = album.decodeSpriteData(spriteIndex);
+	if (!sourceSprite) return false;
+
+	const decodedData = album.decodeSpriteData(sourceIndex);
 	if (!decodedData) return false;
 
-	const width = sprite.width;
-	const height = sprite.height;
+	const width = sourceSprite.width;
+	const height = sourceSprite.height;
 	if (!width || !height) return false;
 
 	const relativePath = `${outputBase}/${album.path}/${spriteIndex}.png`;
 	ensureDir(relativePath.substring(0, relativePath.lastIndexOf("/")));
 
 	const metadata: SpriteMetadata = {
-		x: sprite.x ?? 0,
-		y: sprite.y ?? 0,
-		frameWidth: sprite.frameWidth ?? 0,
-		frameHeight: sprite.frameHeight ?? 0,
+		x: sourceSprite.x ?? 0,
+		y: sourceSprite.y ?? 0,
+		frameWidth: sourceSprite.frameWidth ?? 0,
+		frameHeight: sourceSprite.frameHeight ?? 0,
 		npkFile: npkFile,
 	};
 
@@ -63,10 +71,9 @@ export function extractSprite(
 }
 
 /**
- * 从 NPK 提取所有音频
+ * 从 albums 提取所有音频
  */
-export function extractAudioFromNpk(npkPath: string): number {
-	const albums = readNpkFile(npkPath);
+export function extractAudioFromAlbums(albums: NpkAlbum[]): number {
 	const audioAlbums = albums.filter((a) => a.isAudio());
 
 	for (const album of audioAlbums) {
@@ -79,20 +86,23 @@ export function extractAudioFromNpk(npkPath: string): number {
 }
 
 /**
- * 从 NPK 提取所有图片
+ * 从 albums 提取所有图片
  */
-export function extractSpritesFromNpk(
-	npkPath: string,
+export function extractSpritesFromAlbums(
+	albums: NpkAlbum[],
 	outputBase: string,
+	npkFile: string,
+	skipLinkSprites?: boolean,
 ): number {
-	const albums = readNpkFile(npkPath);
 	const imageAlbums = albums.filter((a) => !a.isAudio());
-	const npkFile = basename(npkPath);
 
 	let savedCount = 0;
 	for (const album of imageAlbums) {
 		const sprites = album.getSprites();
 		for (let i = 0; i < sprites.length; i++) {
+			if (skipLinkSprites && sprites[i]?.type === ColorBits.LINK) {
+				continue;
+			}
 			if (extractSprite(album, i, outputBase, npkFile)) {
 				savedCount++;
 			}

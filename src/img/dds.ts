@@ -46,7 +46,7 @@ export function decodeDds(data: Buffer): DdsTexture {
 	// Offset 80: dwFourCC (4 bytes)
 	const height = data.readUInt32LE(12);
 	const width = data.readUInt32LE(16);
-	const pfFlags = data.readUInt32LE(80);
+	const _pfFlags = data.readUInt32LE(80);
 	const fourCC = data.readUInt32LE(84);
 
 	let format: DdsFormat;

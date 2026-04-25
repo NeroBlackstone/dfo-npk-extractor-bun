@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { deflateSync } from "zlib";
+import { deflateSync } from "node:zlib";
 
 // 构建 Ver2 格式测试 NPK（包含 LINK sprite）
 // 3 sprites: [0] ARGB_1555 ZLIB红色, [1] LINK->[0], [2] ARGB_1555 ZLIB蓝色

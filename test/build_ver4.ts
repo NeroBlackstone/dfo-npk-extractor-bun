@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { deflateSync } from "zlib";
+import { deflateSync } from "node:zlib";
 
 // 构建 Ver4 格式测试 NPK（无 LINK，纯色测试）
 

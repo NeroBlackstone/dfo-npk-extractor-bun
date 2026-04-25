@@ -50,6 +50,61 @@ bun run index.ts
 - 图片：`sprite/monster/screamingcave/apopis/(tn)apopis.img/0.png`
 - 音频：`sounds/test/click.ogg`
 
+### CLI 参数
+
+| 参数 | 说明 |
+|------|------|
+| `--link` | 启用 LINK 帧映射模式（见下文） |
+
+## LINK 帧处理
+
+部分 IMG 文件包含 LINK 类型精灵（type=0x11），它们不存储独立数据，而是引用其他精灵的数据。
+
+### 默认模式（无 `--link`）
+
+LINK 帧会被导出为独立的 PNG 文件，使用目标精灵的图像数据和元数据：
+
+```
+sm_body0000.img/
+├── 0.png   # 正常帧
+├── 1.png   # LINK->0 的副本
+├── 2.png   # 正常帧
+└── ...
+```
+
+### `--link` 模式
+
+生成 `.links.json` 映射文件，跳过 LINK 帧的 PNG 导出：
+
+```bash
+bun run index.ts --link
+```
+
+生成的文件结构：
+
+- PNG：仅包含非 LINK 帧
+- JSON：`{imgPath}.links.json`，记录 LINK 帧映射关系
+
+**JSON 格式：**
+
+```json
+{
+  "source": {
+    "npk": "sprite_character_swordman_equipment_avatar_skin.NPK",
+    "img": "sm_body0000.img"
+  },
+  "links": {
+    "21": 10,
+    "23": 12,
+    "32": 11
+  }
+}
+```
+
+- `source.npk`：来源 NPK 文件名
+- `source.img`：IMG 文件路径
+- `links`：LINK 映射，`key` 为 LINK 帧索引，`value` 为目标帧索引
+
 ## PNG元数据
 
 导出的 PNG 图片会通过 tEXt 块记录精灵的元数据信息，可用 `pngcheck`、`exiftool` 或图像编辑软件查看：

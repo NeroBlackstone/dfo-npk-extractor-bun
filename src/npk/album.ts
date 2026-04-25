@@ -143,4 +143,26 @@ export class NpkAlbum {
 		if (!this.isAudio()) return null;
 		return this._data;
 	}
+
+	/**
+	 * 获取 LINK 帧映射
+	 * @returns 存在 LINK 时返回 index->target 映射，否则返回 null
+	 */
+	getLinks(): Record<string, number> | null {
+		const links: Record<string, number> = {};
+		for (let i = 0; i < this._sprites.length; i++) {
+			const sprite = this._sprites[i];
+			if (
+				sprite &&
+				sprite.type === ColorBits.LINK &&
+				sprite.target !== undefined
+			) {
+				links[i.toString()] = sprite.target;
+			}
+		}
+		if (Object.keys(links).length === 0) {
+			return null;
+		}
+		return links;
+	}
 }
