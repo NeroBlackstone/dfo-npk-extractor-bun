@@ -1,4 +1,5 @@
 import { deflateSync } from "node:zlib";
+import type { SpriteMetadata } from "./types";
 
 // CRC32 table for PNG
 const CRC32_TABLE: number[] = [];
@@ -13,8 +14,14 @@ for (let i = 0; i < 256; i++) {
  * @param data BGRA 格式的像素数据
  * @param width 图片宽度
  * @param height 图片高度
+ * @param metadata 可选的 Sprite 元数据，会写入 tEXt 块
  */
-export function createPng(data: Buffer, width: number, height: number): Buffer {
+export function createPng(
+	data: Buffer,
+	width: number,
+	height: number,
+	metadata?: SpriteMetadata,
+): Buffer {
 	const signature = Buffer.from([
 		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 	]);
@@ -47,12 +54,39 @@ export function createPng(data: Buffer, width: number, height: number): Buffer {
 	// Compress
 	const compressed = deflateSync(raw, { level: 9 });
 
+	const textChunks = buildMetadataChunks(metadata);
+
 	return Buffer.concat([
 		signature,
 		makeChunk("IHDR", ihdrData),
+		...textChunks,
 		makeChunk("IDAT", compressed),
 		makeChunk("IEND", Buffer.alloc(0)),
 	]);
+}
+
+function makeTextChunk(keyword: string, value: string): Buffer {
+	const textData = Buffer.concat([
+		Buffer.from(keyword, "latin1"),
+		Buffer.from([0]),
+		Buffer.from(value, "latin1"),
+	]);
+	return makeChunk("tEXt", textData);
+}
+
+function buildMetadataChunks(metadata?: SpriteMetadata): Buffer[] {
+	if (!metadata) return [];
+	const fields: [string, number][] = [
+		["SpriteX", metadata.x],
+		["SpriteY", metadata.y],
+		["SpriteWidth", metadata.width],
+		["SpriteHeight", metadata.height],
+		["SpriteFrameWidth", metadata.frameWidth],
+		["SpriteFrameHeight", metadata.frameHeight],
+	];
+	return fields.map(([keyword, value]) =>
+		makeTextChunk(keyword, String(value)),
+	);
 }
 
 function makeChunk(type: string, data: Buffer): Buffer {

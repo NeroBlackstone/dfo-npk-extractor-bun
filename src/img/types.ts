@@ -74,3 +74,15 @@ export interface SpriteEntry {
 	frameWidth?: number;
 	frameHeight?: number;
 }
+
+/**
+ * Sprite 元数据，用于写入 PNG tEXt 块
+ */
+export interface SpriteMetadata {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	frameWidth: number;
+	frameHeight: number;
+}

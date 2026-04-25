@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { createPng } from "../img/png";
+import type { SpriteMetadata } from "../img/types";
 import type { NpkAlbum } from "../npk/album";
 import { readNpkFile } from "../npk/index";
 import { ensureDir } from "../utils/file";
@@ -41,8 +42,17 @@ export function extractSprite(
 	const relativePath = `${outputBase}/${album.path}/${spriteIndex}.png`;
 	ensureDir(relativePath.substring(0, relativePath.lastIndexOf("/")));
 
+	const metadata: SpriteMetadata = {
+		x: sprite.x ?? 0,
+		y: sprite.y ?? 0,
+		width: sprite.width ?? 0,
+		height: sprite.height ?? 0,
+		frameWidth: sprite.frameWidth ?? 0,
+		frameHeight: sprite.frameHeight ?? 0,
+	};
+
 	try {
-		const png = createPng(decodedData, width, height);
+		const png = createPng(decodedData, width, height, metadata);
 		writeFileSync(relativePath, png);
 		return true;
 	} catch (e) {
