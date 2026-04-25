@@ -58,10 +58,9 @@ bun run index.ts
 |--------|------|--------|
 | SpriteX | X偏移量 | 100 |
 | SpriteY | Y偏移量 | 50 |
-| SpriteWidth | 精灵宽度 | 64 |
-| SpriteHeight | 精灵高度 | 64 |
 | SpriteFrameWidth | 帧宽度 | 64 |
 | SpriteFrameHeight | 帧高度 | 64 |
+| NpkFile | 来源NPK文件名 | character.NPK |
 
 ## 测试
 

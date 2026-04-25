@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { basename } from "node:path";
 import { createPng } from "../img/png";
 import type { SpriteMetadata } from "../img/types";
 import type { NpkAlbum } from "../npk/album";
@@ -24,6 +25,7 @@ export function extractSprite(
 	album: NpkAlbum,
 	spriteIndex: number,
 	outputBase: string,
+	npkFile: string,
 ): boolean {
 	const sprites = album.getSprites();
 	const sprite = sprites[spriteIndex];
@@ -45,10 +47,9 @@ export function extractSprite(
 	const metadata: SpriteMetadata = {
 		x: sprite.x ?? 0,
 		y: sprite.y ?? 0,
-		width: sprite.width ?? 0,
-		height: sprite.height ?? 0,
 		frameWidth: sprite.frameWidth ?? 0,
 		frameHeight: sprite.frameHeight ?? 0,
+		npkFile: npkFile,
 	};
 
 	try {
@@ -86,12 +87,13 @@ export function extractSpritesFromNpk(
 ): number {
 	const albums = readNpkFile(npkPath);
 	const imageAlbums = albums.filter((a) => !a.isAudio());
+	const npkFile = basename(npkPath);
 
 	let savedCount = 0;
 	for (const album of imageAlbums) {
 		const sprites = album.getSprites();
 		for (let i = 0; i < sprites.length; i++) {
-			if (extractSprite(album, i, outputBase)) {
+			if (extractSprite(album, i, outputBase, npkFile)) {
 				savedCount++;
 			}
 		}

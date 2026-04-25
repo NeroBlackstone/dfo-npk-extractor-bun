@@ -76,13 +76,12 @@ function makeTextChunk(keyword: string, value: string): Buffer {
 
 function buildMetadataChunks(metadata?: SpriteMetadata): Buffer[] {
 	if (!metadata) return [];
-	const fields: [string, number][] = [
+	const fields: [string, string | number][] = [
 		["SpriteX", metadata.x],
 		["SpriteY", metadata.y],
-		["SpriteWidth", metadata.width],
-		["SpriteHeight", metadata.height],
 		["SpriteFrameWidth", metadata.frameWidth],
 		["SpriteFrameHeight", metadata.frameHeight],
+		["NpkFile", metadata.npkFile],
 	];
 	return fields.map(([keyword, value]) =>
 		makeTextChunk(keyword, String(value)),

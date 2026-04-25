@@ -81,8 +81,7 @@ export interface SpriteEntry {
 export interface SpriteMetadata {
 	x: number;
 	y: number;
-	width: number;
-	height: number;
 	frameWidth: number;
 	frameHeight: number;
+	npkFile: string;
 }
