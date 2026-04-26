@@ -1,10 +1,5 @@
 import { expect, test } from "bun:test";
-import { join } from "node:path";
-import {
-	generateTresContent,
-	groupAnisByImg,
-	buildLinkMap,
-} from "./tres";
+import { buildLinkMap, generateTresContent, groupAnisByImg } from "./tres";
 
 const TEST_ANI_DIR = "./test";
 
@@ -17,8 +12,7 @@ test("生成 .tres 内容格式正确", () => {
 	expect(anis).toBeDefined();
 	if (!anis) return;
 
-	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
-	const content = generateTresContent(anis, linkMap, spriteBaseDir);
+	const content = generateTresContent(anis, linkMap, "");
 
 	expect(content).toContain('[gd_resource type="SpriteFrames" format=3 uid="');
 	expect(content).toContain("uid://");
@@ -35,8 +29,7 @@ test("header 包含 uid", () => {
 	const anis = imgGroups.get(imgName);
 	if (!anis) return;
 
-	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
-	const content = generateTresContent(anis, linkMap, spriteBaseDir);
+	const content = generateTresContent(anis, linkMap, "");
 
 	const headerMatch = content.match(
 		/\[gd_resource type="SpriteFrames" format=3 uid="([^"]+)"\]/,
@@ -54,8 +47,7 @@ test("ext_resource id 格式正确 (counter_suffix)", () => {
 	const anis = imgGroups.get(imgName);
 	if (!anis) return;
 
-	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
-	const content = generateTresContent(anis, linkMap, spriteBaseDir);
+	const content = generateTresContent(anis, linkMap, "");
 
 	const idMatches = content.matchAll(/id="(\d+)_([a-z0-9]+)"/g);
 
@@ -77,8 +69,7 @@ test("animations 结构正确 - 每个动画是独立对象", () => {
 	const anis = imgGroups.get(imgName);
 	if (!anis) return;
 
-	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
-	const content = generateTresContent(anis, linkMap, spriteBaseDir);
+	const content = generateTresContent(anis, linkMap, "");
 
 	expect(content).toContain('"frames": [');
 	expect(content).toContain('"loop": false');
@@ -98,8 +89,7 @@ test("单个 .ani 生成包含正确动画名", () => {
 	const anis = imgGroups.get(imgName);
 	if (!anis) return;
 
-	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
-	const content = generateTresContent(anis, linkMap, spriteBaseDir);
+	const content = generateTresContent(anis, linkMap, "");
 
 	expect(content).toContain('"name": &"test"');
 });
@@ -112,8 +102,7 @@ test("frames 数组中每个 frame 包含 duration 和 texture", () => {
 	const anis = imgGroups.get(imgName);
 	if (!anis) return;
 
-	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
-	const content = generateTresContent(anis, linkMap, spriteBaseDir);
+	const content = generateTresContent(anis, linkMap, "");
 
 	const frameMatches = content.matchAll(
 		/"duration":\s*([\d.]+)[^}]*"texture":\s*ExtResource\("([^"]+)"\)/g,

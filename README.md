@@ -72,7 +72,7 @@ npk-extractor tres --ani-dir ./animations --output ./godot
 | 参数 | 说明 |
 |------|------|
 | `--ani-dir` | .ani 文件所在目录（默认 cwd） |
-| `--output` | .tres 文件输出目录（默认 cwd） |
+| `--prefix` | .tres 内资源路径的前缀（默认 `sprite/`） |
 
 ## LINK 帧处理
 

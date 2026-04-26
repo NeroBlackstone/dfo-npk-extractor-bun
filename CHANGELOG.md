@@ -1,5 +1,10 @@
 # Changelog
 
+## dev
+
+- `tres` 子命令的 `--output` 参数改为 `--prefix`，用于控制 .tres 内资源路径的前缀（默认 `sprite/`）
+
+
 ## v0.4.0
 
 - `.tres` 文件输出到 cwd 的 `tres/` 文件夹

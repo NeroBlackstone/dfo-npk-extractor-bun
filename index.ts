@@ -3,7 +3,6 @@ import { generateTresFiles } from "./src/ani/tres";
 import { extract } from "./src/npk/extract";
 
 const WORK_DIR = ".";
-const OUTPUT_BASE = ".";
 
 const { positionals, values } = parseArgs({
 	args: Bun.argv.slice(2),
@@ -20,9 +19,9 @@ const { positionals, values } = parseArgs({
 			type: "string",
 			default: WORK_DIR,
 		},
-		output: {
+		prefix: {
 			type: "string",
-			default: OUTPUT_BASE,
+			default: "sprite/",
 		},
 	},
 	allowPositionals: true,
@@ -44,7 +43,7 @@ Options:
   --help        显示帮助
   --link        启用 LINK 帧映射模式（仅 extract）
   --ani-dir     扫描 .ani 文件的目录（仅 tres，默认: cwd）
-  --output      .tres 文件输出目录（仅 tres，默认: cwd）
+  --prefix      .tres 内资源路径的前缀（仅 tres，默认: 空）
 
 Examples:
   npk-extractor extract                    # 解压 cwd 中所有 npk
@@ -63,14 +62,14 @@ switch (command) {
 			npkPath: npkFileArg,
 			linkMode: values.link,
 			workDir: WORK_DIR,
-			outputBase: OUTPUT_BASE,
+			outputBase: WORK_DIR,
 		});
 		break;
 	}
 	case "tres": {
 		generateTresFiles({
 			aniDir: values["ani-dir"],
-			outputDir: values.output,
+			prefix: values.prefix,
 		});
 		break;
 	}

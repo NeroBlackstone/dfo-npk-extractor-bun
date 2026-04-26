@@ -6,7 +6,7 @@ import { AniFile } from "./AniFile";
 
 export interface TresOptions {
 	aniDir: string;
-	outputDir: string;
+	prefix: string;
 }
 
 function generateUid(): string {
@@ -81,13 +81,11 @@ export function groupAnisByImg(
 function mapAniPathToSpritePath(
 	aniPath: string,
 	frameIndex: number,
-	spriteBaseDir: string,
 ): string {
 	// 占位符 %04d 保持原样，写成 0000
 	const pathWithIndex = aniPath.replace("%04d", "0000");
 	const lowerPath = pathWithIndex.toLowerCase();
 	return join(
-		spriteBaseDir,
 		lowerPath.replace(/\.img$/, ".img"),
 		`${frameIndex}.png`,
 	);
@@ -141,13 +139,11 @@ function resolveFrameIndex(
 export function generateTresContent(
 	anis: { aniFile: AniFile; aniPath: string }[],
 	linkMap: Map<string, Record<string, number>>,
-	spriteBaseDir: string,
+	prefix: string,
 ): string {
 	const lines: string[] = [];
 	const resourceUid = generateUid();
-	lines.push(
-		`[gd_resource type="SpriteFrames" format=3 uid="${resourceUid}"]`,
-	);
+	lines.push(`[gd_resource type="SpriteFrames" format=3 uid="${resourceUid}"]`);
 	lines.push("");
 
 	// ext_resource 映射
@@ -167,7 +163,6 @@ export function generateTresContent(
 			const spritePath = mapAniPathToSpritePath(
 				frame.imagePath,
 				resolvedIndex,
-				spriteBaseDir,
 			);
 			spritePaths.push(spritePath);
 		}
@@ -179,7 +174,7 @@ export function generateTresContent(
 			const extId = generateExtId(extCounter);
 			extIdMap.set(spritePath, extId);
 			lines.push(
-				`[ext_resource type="Texture2D" uid="uid://${generateUid().replace("uid://", "")}" path="res://${escapeTresString(spritePath)}" id="${extId}"]`,
+				`[ext_resource type="Texture2D" uid="uid://${generateUid().replace("uid://", "")}" path="res://${prefix ? `${prefix}/` : ""}${escapeTresString(spritePath)}" id="${extId}"]`,
 			);
 			extCounter++;
 		}
@@ -203,7 +198,6 @@ export function generateTresContent(
 				const spritePath = mapAniPathToSpritePath(
 					frame.imagePath,
 					resolvedIndex,
-					spriteBaseDir,
 				);
 				const extId = extIdMap.get(spritePath) ?? "1_unknown";
 				return `{\n"duration": ${frame.delay / 100},\n"texture": ExtResource("${extId}")\n}`;
@@ -223,7 +217,7 @@ export function generateTresContent(
 }
 
 export function generateTresFiles(options: TresOptions): void {
-	const { aniDir, outputDir } = options;
+	const { aniDir, prefix } = options;
 
 	const imgGroups = groupAnisByImg(aniDir);
 
@@ -247,10 +241,13 @@ export function generateTresFiles(options: TresOptions): void {
 
 		const aniNames = anis.map((a) => basename(a.aniPath));
 		console.log(`[${imgName}] ${aniNames.join(", ")}`);
-		const spriteBaseDir = join(outputDir, "sprite");
 		const tresPath = join(cwd(), "tres", imgName.replace(".img", ".tres"));
 
-		const tresContent = generateTresContent(anis, linkMap, spriteBaseDir);
+		const tresContent = generateTresContent(
+			anis,
+			linkMap,
+			prefix,
+		);
 
 		mkdirSync(join(cwd(), "tres"), { recursive: true });
 		writeFileSync(tresPath, tresContent, "utf-8");

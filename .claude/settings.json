@@ -1,8 +1,5 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(git show *)",
-      "Bash(bun test *)"
-    ]
-  }
+	"permissions": {
+		"allow": ["Bash(git show *)", "Bash(bun test *)"]
+	}
 }
