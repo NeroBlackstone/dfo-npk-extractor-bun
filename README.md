@@ -48,7 +48,7 @@ npk-extractor extract sprite_character_swordman_equipment_avatar_skin.NPK
 # 配合 --link 模式
 npk-extractor extract --link sprite_character_swordman_equipment_avatar_skin.NPK
 
-# 生成 Godot .tres 文件（扫描当前目录的pvf .ani）
+# 生成 Godot .tres 文件（扫描当前目录的pvf .ani和npk）
 npk-extractor tres
 
 # 指定 .ani 目录生成 .tres
@@ -58,17 +58,21 @@ npk-extractor tres --ani-dir ./animations --output ./godot
 输出结构示例：
 - 图片：`sprite/monster/screamingcave/apopis/(tn)apopis.img/0.png`
 - 音频：`sounds/test/click.ogg`
-- .tres：`sm_body0000.tres`
+- .tres：`tres/sm_body0000.tres`
 
-### CLI 参数
+### extract 参数
 
 | 参数 | 说明 |
 |------|------|
-| `extract <file.NPK>` | 解压 NPK 文件（可选，默认为当前目录） |
-| `tres` | 生成 Godot .tres 文件 |
-| `--link` | 启用 LINK 帧映射模式（仅 extract） |
-| `--ani-dir` | .ani 文件所在目录（仅 tres，默认 cwd） |
-| `--output` | .tres 文件输出目录（仅 tres，默认 cwd） |
+| `<file.NPK>` | NPK 文件路径（可选，默认为当前目录） |
+| `--link` | 启用 LINK 帧映射模式 |
+
+### tres 参数
+
+| 参数 | 说明 |
+|------|------|
+| `--ani-dir` | .ani 文件所在目录（默认 cwd） |
+| `--output` | .tres 文件输出目录（默认 cwd） |
 
 ## LINK 帧处理
 

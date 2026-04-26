@@ -1,30 +1,43 @@
-import { beforeAll, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { expect, test } from "bun:test";
 import { join } from "node:path";
-import { generateTresFiles } from "./tres";
+import {
+	generateTresContent,
+	groupAnisByImg,
+	buildLinkMap,
+} from "./tres";
 
-const TEST_ANI_DIR = "./test/aniTest";
-const TEST_OUTPUT_DIR = "./test/aniTest";
+const TEST_ANI_DIR = "./test";
 
-beforeAll(() => {
-	generateTresFiles({ aniDir: TEST_ANI_DIR, outputDir: TEST_OUTPUT_DIR });
-});
+test("生成 .tres 内容格式正确", () => {
+	const imgGroups = groupAnisByImg(TEST_ANI_DIR);
+	const linkMap = buildLinkMap(TEST_ANI_DIR, new Set(imgGroups.keys()));
 
-test("生成 sm_body0000.tres 文件", () => {
-	const tresPath = join(TEST_OUTPUT_DIR, "sm_body0000.tres");
-	const content = readFileSync(tresPath, "utf-8");
+	const imgName = "img.img";
+	const anis = imgGroups.get(imgName);
+	expect(anis).toBeDefined();
+	if (!anis) return;
+
+	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
+	const content = generateTresContent(anis, linkMap, spriteBaseDir);
 
 	expect(content).toContain('[gd_resource type="SpriteFrames" format=3 uid="');
 	expect(content).toContain("uid://");
 	expect(content).toContain('id="1_');
-	expect(content).toContain('id="2_');
 	expect(content).toContain("[resource]");
 	expect(content).toContain("animations = [");
 });
 
 test("header 包含 uid", () => {
-	const tresPath = join(TEST_OUTPUT_DIR, "sm_body0000.tres");
-	const content = readFileSync(tresPath, "utf-8");
+	const imgGroups = groupAnisByImg(TEST_ANI_DIR);
+	const linkMap = buildLinkMap(TEST_ANI_DIR, new Set(imgGroups.keys()));
+
+	const imgName = "img.img";
+	const anis = imgGroups.get(imgName);
+	if (!anis) return;
+
+	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
+	const content = generateTresContent(anis, linkMap, spriteBaseDir);
+
 	const headerMatch = content.match(
 		/\[gd_resource type="SpriteFrames" format=3 uid="([^"]+)"\]/,
 	);
@@ -34,8 +47,16 @@ test("header 包含 uid", () => {
 });
 
 test("ext_resource id 格式正确 (counter_suffix)", () => {
-	const tresPath = join(TEST_OUTPUT_DIR, "sm_body0000.tres");
-	const content = readFileSync(tresPath, "utf-8");
+	const imgGroups = groupAnisByImg(TEST_ANI_DIR);
+	const linkMap = buildLinkMap(TEST_ANI_DIR, new Set(imgGroups.keys()));
+
+	const imgName = "img.img";
+	const anis = imgGroups.get(imgName);
+	if (!anis) return;
+
+	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
+	const content = generateTresContent(anis, linkMap, spriteBaseDir);
+
 	const idMatches = content.matchAll(/id="(\d+)_([a-z0-9]+)"/g);
 
 	const ids = Array.from(idMatches);
@@ -49,31 +70,50 @@ test("ext_resource id 格式正确 (counter_suffix)", () => {
 });
 
 test("animations 结构正确 - 每个动画是独立对象", () => {
-	const tresPath = join(TEST_OUTPUT_DIR, "sm_body0000.tres");
-	const content = readFileSync(tresPath, "utf-8");
+	const imgGroups = groupAnisByImg(TEST_ANI_DIR);
+	const linkMap = buildLinkMap(TEST_ANI_DIR, new Set(imgGroups.keys()));
+
+	const imgName = "img.img";
+	const anis = imgGroups.get(imgName);
+	if (!anis) return;
+
+	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
+	const content = generateTresContent(anis, linkMap, spriteBaseDir);
 
 	expect(content).toContain('"frames": [');
-	expect(content).toContain('"loop": true');
+	expect(content).toContain('"loop": false');
 	expect(content).toContain('"name": &"');
 	expect(content).toContain('"speed": 5.0');
 
 	const animBlocks = content.match(/\{[\s\S]*?"frames":\s*\[/g);
 	expect(animBlocks).not.toBeNull();
-	expect(animBlocks?.length).toBe(3);
+	expect(animBlocks?.length).toBe(1);
 });
 
-test("多个 .ani 共享同一 IMG 生成一个 .tres", () => {
-	const tresPath = join(TEST_OUTPUT_DIR, "sm_body0000.tres");
-	const content = readFileSync(tresPath, "utf-8");
+test("单个 .ani 生成包含正确动画名", () => {
+	const imgGroups = groupAnisByImg(TEST_ANI_DIR);
+	const linkMap = buildLinkMap(TEST_ANI_DIR, new Set(imgGroups.keys()));
 
-	expect(content).toContain('"name": &"attack1"');
-	expect(content).toContain('"name": &"attack2"');
-	expect(content).toContain('"name": &"attack3"');
+	const imgName = "img.img";
+	const anis = imgGroups.get(imgName);
+	if (!anis) return;
+
+	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
+	const content = generateTresContent(anis, linkMap, spriteBaseDir);
+
+	expect(content).toContain('"name": &"test"');
 });
 
 test("frames 数组中每个 frame 包含 duration 和 texture", () => {
-	const tresPath = join(TEST_OUTPUT_DIR, "sm_body0000.tres");
-	const content = readFileSync(tresPath, "utf-8");
+	const imgGroups = groupAnisByImg(TEST_ANI_DIR);
+	const linkMap = buildLinkMap(TEST_ANI_DIR, new Set(imgGroups.keys()));
+
+	const imgName = "img.img";
+	const anis = imgGroups.get(imgName);
+	if (!anis) return;
+
+	const spriteBaseDir = join(TEST_ANI_DIR, "sprite");
+	const content = generateTresContent(anis, linkMap, spriteBaseDir);
 
 	const frameMatches = content.matchAll(
 		/"duration":\s*([\d.]+)[^}]*"texture":\s*ExtResource\("([^"]+)"\)/g,

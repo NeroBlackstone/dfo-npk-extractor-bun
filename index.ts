@@ -47,11 +47,11 @@ Options:
   --output      .tres 文件输出目录（仅 tres，默认: cwd）
 
 Examples:
-  bun index.ts extract                    # 解压 cwd 中所有 npk
-  bun index.ts extract some.npk           # 解压单个 npk
-  bun index.ts extract --link            # 带 link 模式解压
-  bun index.ts tres                       # 扫描 cwd 生成 .tres
-  bun index.ts tres --ani-dir ./animations
+  npk-extractor extract                    # 解压 cwd 中所有 npk
+  npk-extractor extract some.npk           # 解压单个 npk
+  npk-extractor extract --link            # 带 link 模式解压
+  npk-extractor tres                       # 扫描 cwd 生成 .tres
+  npk-extractor tres --ani-dir ./animations
   `.trim(),
 	);
 }
