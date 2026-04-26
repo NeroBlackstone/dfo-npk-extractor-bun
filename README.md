@@ -26,40 +26,53 @@ bun install
 
 出于法律风险上的考量，本项目不提供可执行的程序，推荐安装 bun 运行时并手动构建可执行程序。
 
-在拉取了依赖的前提下，执行构建脚本:
+```bash
+# 本平台构建
+bun run build
 
-- 全平台构建: `./build/all.sh`
-- 单平台构建: 参见 [build/](build/) 目录下的脚本
+# 全平台交叉编译
+bun run build:all
+```
+
+构建产物输出到 `dist/` 目录。
 
 ## 使用
 
 ```bash
-# 扫描当前目录下的所有 .npk 文件
-bun run index.ts
+# 解压 NPK（扫描当前目录所有 .npk）
+npk-extractor extract
 
-# 指定 NPK 文件（必须放在最后）
-bun run index.ts sprite_character_swordman_equipment_avatar_skin.NPK
+# 解压单个 NPK 文件
+npk-extractor extract sprite_character_swordman_equipment_avatar_skin.NPK
 
-# 配合 --link 模式（--link 放在前面，NPK 文件放在最后）
-bun run index.ts --link sprite_character_swordman_equipment_avatar_skin.NPK
+# 配合 --link 模式
+npk-extractor extract --link sprite_character_swordman_equipment_avatar_skin.NPK
+
+# 生成 Godot .tres 文件（扫描当前目录的pvf .ani）
+npk-extractor tres
+
+# 指定 .ani 目录生成 .tres
+npk-extractor tres --ani-dir ./animations --output ./godot
 ```
 
-或者使用构建后的可执行文件（参见 [build/](build/) 目录）:
-
 ```
-./dist/npk-extractor
+npk-extractor
 ```
 
 输出结构示例：
 - 图片：`sprite/monster/screamingcave/apopis/(tn)apopis.img/0.png`
 - 音频：`sounds/test/click.ogg`
+- .tres：`sm_body0000.tres`
 
 ### CLI 参数
 
 | 参数 | 说明 |
 |------|------|
-| `file.NPK` | 指定要处理的 NPK 文件路径（**必须放在最后**，可选，默认为当前目录） |
-| `--link` | 启用 LINK 帧映射模式（见下文） |
+| `extract <file.NPK>` | 解压 NPK 文件（可选，默认为当前目录） |
+| `tres` | 生成 Godot .tres 文件 |
+| `--link` | 启用 LINK 帧映射模式（仅 extract） |
+| `--ani-dir` | .ani 文件所在目录（仅 tres，默认 cwd） |
+| `--output` | .tres 文件输出目录（仅 tres，默认 cwd） |
 
 ## LINK 帧处理
 
@@ -82,7 +95,7 @@ sm_body0000.img/
 生成 `.links.json` 映射文件，跳过 LINK 帧的 PNG 导出：
 
 ```bash
-bun run index.ts --link
+npk-extractor extract --link
 ```
 
 生成的文件结构：
@@ -158,8 +171,10 @@ bun test
 
 ```
 src/
-├── extract/          # 提取逻辑
-│   └── index.ts      # 音频/图片提取函数
+├── ani/
+│   ├── AniFile.ts    # ANI 动画文件解析
+│   ├── tres.ts       # Godot .tres 格式生成器
+│   └── index.ts      # 导出入口
 ├── img/
 │   ├── decoder.ts    # Sprite 数据解码 (Zlib/DDS)
 │   ├── dds.ts        # DDS 格式解码 (DXT1/DXT3/DXT5)
@@ -174,6 +189,7 @@ src/
 ├── npk/
 │   ├── index.ts      # 导出入口
 │   ├── album.ts      # NpkAlbum 类（含 isAudio, getAudioData）
+│   ├── extract.ts    # NPK 解压入口（extract 子命令）
 │   └── reader.ts     # NPK 读取核心
 └── utils/
     ├── crypto.ts     # XOR 加密/解密工具

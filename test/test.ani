@@ -1,0 +1,59 @@
+#PVF_File
+
+[FRAME MAX]
+	5
+
+[FRAME000]
+	[IMAGE]
+	`MyGame/Hero/Knight/armor/knight_body%04d.img`
+	0
+	[IMAGE POS]
+	-100	-200
+	[DELAY]
+	80
+	[DAMAGE BOX]
+	-10	-5	-5	20	10	50
+
+[FRAME001]
+	[IMAGE]
+	`MyGame/Hero/Knight/armor/knight_body%04d.img`
+	1
+	[IMAGE POS]
+	-100	-200
+	[DELAY]
+	80
+	[DAMAGE BOX]
+	-12	-5	-6	22	10	55
+
+[FRAME002]
+	[IMAGE]
+	`MyGame/Hero/Knight/armor/knight_body%04d.img`
+	2
+	[IMAGE POS]
+	-100	-200
+	[DELAY]
+	80
+	[DAMAGE BOX]
+	-8	-5	-4	18	10	48
+
+[FRAME003]
+	[IMAGE]
+	`MyGame/Hero/Knight/armor/knight_body%04d.img`
+	3
+	[IMAGE POS]
+	-100	-200
+	[DELAY]
+	80
+	[DAMAGE BOX]
+	-15	-5	-7	25	10	60
+
+[FRAME004]
+	[IMAGE]
+	`MyGame/Hero/Knight/armor/knight_body%04d.img`
+	4
+	[IMAGE POS]
+	-100	-200
+	[DELAY]
+	200
+	[DAMAGE BOX]
+	-20	-5	-10	30	10	70

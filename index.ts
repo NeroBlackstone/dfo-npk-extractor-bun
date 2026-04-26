@@ -1,14 +1,10 @@
-import { readdirSync, writeFileSync } from "node:fs";
-import { basename } from "node:path";
 import { parseArgs } from "node:util";
-import { readNpkFile } from "./src/npk/index";
-import { ensureDir } from "./src/utils/file";
+import { generateTresFiles } from "./src/ani/tres";
+import { extract } from "./src/npk/extract";
 
-// 扫描工作目录下的所有 .npk 文件
 const WORK_DIR = ".";
 const OUTPUT_BASE = ".";
 
-// 解析 CLI 参数
 const { positionals, values } = parseArgs({
 	args: Bun.argv.slice(2),
 	options: {
@@ -16,84 +12,80 @@ const { positionals, values } = parseArgs({
 			type: "boolean",
 			default: false,
 		},
+		help: {
+			type: "boolean",
+			default: false,
+		},
+		"ani-dir": {
+			type: "string",
+			default: WORK_DIR,
+		},
+		output: {
+			type: "string",
+			default: OUTPUT_BASE,
+		},
 	},
 	allowPositionals: true,
 	strict: true,
 });
 
-const linkMode = values.link;
+const [command, ...cmdPositionals] = positionals;
 
-// 支持直接传 NPK 文件路径（最后一个参数），或扫描当前目录
-const npkFileArg = positionals.length > 0 ? positionals.at(-1) : null;
-const npkFiles = npkFileArg
-	? [npkFileArg]
-	: readdirSync(WORK_DIR).filter((f) => f.toLowerCase().endsWith(".npk"));
-
-if (npkFiles.length === 0) {
+function showHelp() {
 	console.log(
-		positionals.length > 0
-			? "No .npk files found in specified paths"
-			: "No .npk files found in working directory",
+		`
+npk-extractor <command> [options]
+
+Commands:
+  extract   从 NPK 文件解压 sprite/audio
+  tres      扫描 .ani 文件，为共享 npk 生成 .tres
+
+Options:
+  --help        显示帮助
+  --link        启用 LINK 帧映射模式（仅 extract）
+  --ani-dir     扫描 .ani 文件的目录（仅 tres，默认: cwd）
+  --output      .tres 文件输出目录（仅 tres，默认: cwd）
+
+Examples:
+  bun index.ts extract                    # 解压 cwd 中所有 npk
+  bun index.ts extract some.npk           # 解压单个 npk
+  bun index.ts extract --link            # 带 link 模式解压
+  bun index.ts tres                       # 扫描 cwd 生成 .tres
+  bun index.ts tres --ani-dir ./animations
+  `.trim(),
 	);
-	process.exit(0);
 }
 
-console.log(`Found ${npkFiles.length} NPK file(s)\n`);
-
-let totalAudio = 0;
-let totalSprites = 0;
-
-for (const npkFile of npkFiles) {
-	const albums = readNpkFile(npkFile);
-	const audioPaths: string[] = [];
-	let npkSprites = 0;
-
-	for (const album of albums) {
-		if (album.isAudio()) {
-			if (album.extractAudio(OUTPUT_BASE)) {
-				totalAudio++;
-				audioPaths.push(album.path);
-			}
+switch (command) {
+	case "extract": {
+		const npkFileArg = cmdPositionals[0] ?? null;
+		extract({
+			npkPath: npkFileArg,
+			linkMode: values.link,
+			workDir: WORK_DIR,
+			outputBase: OUTPUT_BASE,
+		});
+		break;
+	}
+	case "tres": {
+		generateTresFiles({
+			aniDir: values["ani-dir"],
+			outputDir: values.output,
+		});
+		break;
+	}
+	case "help":
+	case undefined:
+		if (values.help || command === undefined) {
+			showHelp();
 		} else {
-			if (linkMode) {
-				const links = album.getLinks();
-				if (links) {
-					const jsonPath = `${OUTPUT_BASE}/${album.path}/${basename(album.path)}.links.json`;
-					ensureDir(jsonPath.substring(0, jsonPath.lastIndexOf("/")));
-					writeFileSync(
-						jsonPath,
-						JSON.stringify(
-							{
-								source: { npk: npkFile, img: album.path },
-								links,
-							},
-							null,
-							2,
-						),
-					);
-				}
-			}
-
-			npkSprites += album.extractSprites(OUTPUT_BASE, linkMode);
+			console.error(`Unknown command: ${command}`);
+			showHelp();
+			process.exit(1);
 		}
-	}
-
-	// 写入元数据文件到 OGG 同目录（仅 --link 模式）
-	if (linkMode) {
-		const firstOgg = audioPaths[0];
-		if (firstOgg) {
-			const firstOggDir = firstOgg.substring(0, firstOgg.lastIndexOf("/"));
-			const npkBaseName = npkFile.replace(/.*\//, "").replace(".npk", "");
-			const metaPath = `${OUTPUT_BASE}/${firstOggDir}/${npkBaseName}.npk.json`;
-			ensureDir(metaPath.substring(0, metaPath.lastIndexOf("/")));
-			writeFileSync(metaPath, JSON.stringify({ npkFile, sounds: audioPaths }, null, 2));
-		}
-	}
-
-	console.log(`[${npkFile}] ${audioPaths.length} audio, ${npkSprites} sprites`);
-	totalSprites += npkSprites;
+		break;
+	default:
+		console.error(`Unknown command: ${command}`);
+		showHelp();
+		process.exit(1);
 }
-
-console.log(
-	`\nDone! Extracted ${totalAudio} audio files, ${totalSprites} sprites`,
-);

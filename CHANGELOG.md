@@ -1,8 +1,12 @@
 # Changelog
 
-## v0.4.0
+## dev
 
 - `--link` 模式下新增音频元数据 JSON，记录来源 NPK 和 OGG 文件列表
+- 新增 `tres` 子命令，扫描 .ani 文件生成 Godot .tres 格式 SpriteFrames
+- CLI 重构为子命令结构（`extract` / `tres`）
+- 构建脚本迁移至 package.json（删除 `build/` 目录）
+
 
 ## v0.3.0
 
