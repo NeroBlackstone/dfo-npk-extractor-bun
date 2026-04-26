@@ -55,10 +55,6 @@ npk-extractor tres
 npk-extractor tres --ani-dir ./animations --output ./godot
 ```
 
-```
-npk-extractor
-```
-
 输出结构示例：
 - 图片：`sprite/monster/screamingcave/apopis/(tn)apopis.img/0.png`
 - 音频：`sounds/test/click.ogg`
