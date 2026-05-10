@@ -1,4 +1,4 @@
-import { BufferReader } from "./buffer-reader";
+import { BufferReader } from "../buffer-reader";
 
 /** AnimationNodeType enum (C++ PvfAnimation.h) */
 enum AnimationNodeType {

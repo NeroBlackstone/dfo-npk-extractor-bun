@@ -1,5 +1,5 @@
-import { BufferReader } from "./buffer-reader";
-import type { PvfStringContext } from "./types";
+import { BufferReader } from "../buffer-reader";
+import type { PvfStringContext } from "../types";
 
 /** ValueType enum (C++ ValueType.h) */
 enum ValueType {

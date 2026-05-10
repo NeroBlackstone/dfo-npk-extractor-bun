@@ -1,9 +1,5 @@
 import { BufferReader } from "./buffer-reader";
-
-// Bun 的 @types/bun 将 TextDecoder 编码限制为 Bun.Encoding（仅 utf-8/windows-1252/utf-16），
-// 但运行时支持 WHATWG 标准编码包括 big5。这里用 as any 桥接类型差异。
-const big5Decoder = new TextDecoder("big5" as any);
-const eucKrDecoder = new TextDecoder("euc-kr" as any);
+import { decodeBig5 } from "./encoding";
 
 /**
  * 解析 stringtable.bin，构建字符串数组
@@ -35,7 +31,7 @@ export function parseStringTable(data: Buffer): string[] {
 
 		const strStart = startPos + 4;
 		const strBytes = data.subarray(strStart, strStart + len);
-		const str = big5Decoder.decode(strBytes).toLowerCase().trim();
+		const str = decodeBig5(strBytes).toLowerCase().trim();
 		map[i] = str;
 	}
 
@@ -58,21 +54,6 @@ export function parseStrContent(content: string): Map<string, string> {
 		}
 	}
 	return map;
-}
-
-/**
- * 将 buffer 数据用 BIG5 编码解码为 UTF-8 文本
- */
-export function decodeBig5(data: Buffer): string {
-	return big5Decoder.decode(data);
-}
-
-/**
- * 将 buffer 数据用 EUC-KR 编码解码为 UTF-8 文本
- * .nut 等脚本文件使用 EUC-KR（CP949）编码
- */
-export function decodeEucKr(data: Buffer): string {
-	return eucKrDecoder.decode(data);
 }
 
 const N_STRING_MAGIC = 53424;

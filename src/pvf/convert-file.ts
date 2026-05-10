@@ -1,10 +1,7 @@
-import { parseBinaryAni } from "./ani-binary";
-import { serializeAniToText } from "./ani-text";
-import { parseDocument } from "./document";
-import { serializeDocumentToText } from "./document-text";
-import { decompileScriptFile, isScriptFile } from "./script-file";
-import { decodeBig5, decodeEucKr } from "./string-table";
+import { decoders } from "./decoders";
 import type { PvfStringContext } from "./types";
+
+const SKIPPED = new Set(["stringtable.bin", "n_string.lst"]);
 
 /**
  * 将 PVF 文件数据从二进制格式转换为文本格式
@@ -17,41 +14,17 @@ export function convertFile(
 ): string | Buffer {
 	const lowerPath = filePath.toLowerCase();
 
-	if (lowerPath.endsWith(".ani")) {
-		try {
-			const aniData = parseBinaryAni(data);
-			return serializeAniToText(aniData);
-		} catch {
-			return data;
-		}
+	if (SKIPPED.has(lowerPath)) {
+		return data;
 	}
 
-	if (lowerPath.endsWith(".str")) {
-		return decodeBig5(data);
-	}
-
-	if (lowerPath.endsWith(".nut")) {
-		return decodeEucKr(data);
-	}
-
-	if (
-		lowerPath !== "stringtable.bin" &&
-		lowerPath !== "n_string.lst" &&
-		data.length > 7
-	) {
-		if (isScriptFile(data)) {
+	for (const decoder of decoders) {
+		if (decoder.match(lowerPath, data, ctx)) {
 			try {
-				return decompileScriptFile(data, ctx);
+				return decoder.convert(data, lowerPath, ctx);
 			} catch {
 				return data;
 			}
-		}
-
-		try {
-			const docTree = parseDocument(data, ctx);
-			return serializeDocumentToText(docTree);
-		} catch {
-			return data;
 		}
 	}
 

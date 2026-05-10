@@ -1,4 +1,4 @@
-import type { PvfStringContext } from "./types";
+import type { PvfStringContext } from "../types";
 
 function formatFloat(value: number): string {
 	const text = value.toString();
