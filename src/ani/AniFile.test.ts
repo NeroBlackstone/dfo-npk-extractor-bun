@@ -14,9 +14,7 @@ describe("AniFile", () => {
 	test("first frame has correct imagePath and imageIndex", () => {
 		const ani = AniFile.fromPath(ANI_PATH);
 		const frame = ani.frames[0]!;
-		expect(frame.imagePath).toBe(
-			"MyGame/Hero/Knight/armor/knight_body%04d.img",
-		);
+		expect(frame.imagePath).toBe("test/sprite/album0/img.img");
 		expect(frame.imageIndex).toBe(0);
 		expect(frame.delay).toBe(80);
 	});
@@ -24,9 +22,7 @@ describe("AniFile", () => {
 	test("last frame has correct imageIndex and delay", () => {
 		const ani = AniFile.fromPath(ANI_PATH);
 		const frame = ani.frames.at(-1)!;
-		expect(frame.imagePath).toBe(
-			"MyGame/Hero/Knight/armor/knight_body%04d.img",
-		);
+		expect(frame.imagePath).toBe("test/sprite/album0/img.img");
 		expect(frame.imageIndex).toBe(4);
 		expect(frame.delay).toBe(200);
 	});
@@ -35,7 +31,7 @@ describe("AniFile", () => {
 		const ani = AniFile.fromPath(ANI_PATH);
 		for (const frame of ani.frames) {
 			expect(frame.imagePath).not.toBe("");
-			expect(frame.imagePath).toContain("%04d");
+			expect(frame.imagePath).toBe("test/sprite/album0/img.img");
 		}
 	});
 
@@ -81,7 +77,7 @@ describe("AniFile.toTres", () => {
 		const tres = ani.toTres("sprite");
 
 		expect(tres).toContain(
-			"res://sprite/mygame/hero/knight/armor/knight_body0000.img/0.png",
+			"res://sprite/test/sprite/album0/img.img/0.png",
 		);
 	});
 });

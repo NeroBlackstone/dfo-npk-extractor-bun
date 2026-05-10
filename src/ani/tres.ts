@@ -78,17 +78,11 @@ export function groupAnisByImg(
 	return imgGroups;
 }
 
-function mapAniPathToSpritePath(
-	aniPath: string,
-	frameIndex: number,
-): string {
+function mapAniPathToSpritePath(aniPath: string, frameIndex: number): string {
 	// 占位符 %04d 保持原样，写成 0000
 	const pathWithIndex = aniPath.replace("%04d", "0000");
 	const lowerPath = pathWithIndex.toLowerCase();
-	return join(
-		lowerPath.replace(/\.img$/, ".img"),
-		`${frameIndex}.png`,
-	);
+	return join(lowerPath.replace(/\.img$/, ".img"), `${frameIndex}.png`);
 }
 
 function escapeTresString(str: string): string {
@@ -160,10 +154,7 @@ export function generateTresContent(
 				frame.imageIndex,
 				linkMap,
 			);
-			const spritePath = mapAniPathToSpritePath(
-				frame.imagePath,
-				resolvedIndex,
-			);
+			const spritePath = mapAniPathToSpritePath(frame.imagePath, resolvedIndex);
 			spritePaths.push(spritePath);
 		}
 	}
@@ -243,11 +234,7 @@ export function generateTresFiles(options: TresOptions): void {
 		console.log(`[${imgName}] ${aniNames.join(", ")}`);
 		const tresPath = join(cwd(), "tres", imgName.replace(".img", ".tres"));
 
-		const tresContent = generateTresContent(
-			anis,
-			linkMap,
-			prefix,
-		);
+		const tresContent = generateTresContent(anis, linkMap, prefix);
 
 		mkdirSync(join(cwd(), "tres"), { recursive: true });
 		writeFileSync(tresPath, tresContent, "utf-8");

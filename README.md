@@ -2,6 +2,10 @@
 
 NPK 跨平台资源包解析器。将 .npk 文件转换为 PNG 图片和 OGG 音频。
 
+支持PVF解压。
+
+支持NPK转GoDot素材
+
 ## Disclaimer
 
 This project is intended for educational and research purposes only.
@@ -40,19 +44,25 @@ bun run build:all
 
 ```bash
 # 解压 NPK（扫描当前目录所有 .npk）
-npk-extractor extract
+npk-extractor npk
 
 # 解压单个 NPK 文件
-npk-extractor extract sprite_character_swordman_equipment_avatar_skin.NPK
+npk-extractor npk sprite_character_swordman_equipment_avatar_skin.NPK
 
 # 配合 --link 模式
-npk-extractor extract --link sprite_character_swordman_equipment_avatar_skin.NPK
+npk-extractor npk --link sprite_character_swordman_equipment_avatar_skin.NPK
 
 # 生成 Godot .tres 文件（扫描当前目录的pvf .ani和npk）
 npk-extractor tres
 
 # 指定 .ani 目录生成 .tres
-npk-extractor tres --ani-dir ./animations --output ./godot
+npk-extractor tres --ani-dir ./animations --prefix sprite/
+
+# 解密并提取 PVF 文件（默认输出到 pvf/ 目录）
+npk-extractor pvf Script.pvf
+
+# 指定输出目录
+npk-extractor pvf Script.pvf --output ./out
 ```
 
 输出结构示例：
@@ -60,12 +70,19 @@ npk-extractor tres --ani-dir ./animations --output ./godot
 - 音频：`sounds/test/click.ogg`
 - .tres：`tres/sm_body0000.tres`
 
-### extract 参数
+### npk 参数
 
 | 参数 | 说明 |
 |------|------|
 | `<file.NPK>` | NPK 文件路径（可选，默认为当前目录） |
 | `--link` | 启用 LINK 帧映射模式 |
+
+### pvf 参数
+
+| 参数 | 说明 |
+|------|------|
+| `<file.pvf>` | PVF 文件路径（必填） |
+| `--output` | 输出目录（默认 `pvf/`） |
 
 ### tres 参数
 
@@ -95,7 +112,7 @@ sm_body0000.img/
 生成 `.links.json` 映射文件，跳过 LINK 帧的 PNG 导出：
 
 ```bash
-npk-extractor extract --link
+npk-extractor npk --link
 ```
 
 生成的文件结构：
@@ -189,8 +206,13 @@ src/
 ├── npk/
 │   ├── index.ts      # 导出入口
 │   ├── album.ts      # NpkAlbum 类（含 isAudio, getAudioData）
-│   ├── extract.ts    # NPK 解压入口（extract 子命令）
+│   ├── extract.ts    # NPK 解压入口（npk 子命令）
 │   └── reader.ts     # NPK 读取核心
+├── pvf/
+│   ├── index.ts      # 导出入口
+│   ├── reader.ts     # PVF 解密与读取核心
+│   ├── extract.ts    # PVF 提取入口（pvf 子命令）
+│   └── types.ts      # PVF 类型定义
 └── utils/
     ├── crypto.ts     # XOR 加密/解密工具
     └── file.ts       # 文件操作工具
@@ -366,6 +388,210 @@ NPK 中音频文件以 `.ogg` 结尾，存储在 `sounds/` 目录下：
 示例 (test/test_audio.npk):
 - 路径格式: `sounds/test/click.ogg`
 - 2 个测试音频文件
+
+## PVF 文件格式
+
+PVF（Package Virtual File System）是 DNF 用于存储游戏配置、脚本、字符串表等数据的打包格式。PVF 文件内部使用自定义的加密和编码机制。
+
+### PVF 文件整体结构
+
+```
++------------------+
+| PvfHeader        |  56 bytes - 文件头
++------------------+
+| 目录树数据       |  dirTreeLength bytes - 加密的目录索引
++------------------+
+| 文件数据[0]      |  加密的文件内容
+| 文件数据[1]      |
+| ...              |
++------------------+
+```
+
+### PvfHeader 文件头 (56 bytes)
+
+```
++------------------+------------+
+| sizeGUID         | 4 bytes   | 固定值 0x24 (36)
++------------------+------------+
+| GUID             | 36 bytes  | 文件唯一标识
++------------------+------------+
+| fileVersion      | 4 bytes   | PVF 版本号
++------------------+------------+
+| dirTreeLength    | 4 bytes   | 目录树占用字节数
++------------------+------------+
+| dirTreeChecksum  | 4 bytes   | 目录树 CRC32 校验码
++------------------+------------+
+| numFilesInDirTree| 4 bytes   | PVF 内文件总数
++------------------+------------+
+```
+
+总大小: 4 + 36 + 4 + 4 + 4 + 4 = **56 字节**
+
+### 目录树结构
+
+目录树紧跟在头部之后，存储了 PVF 内所有文件的索引信息。目录树数据是**加密**的，需要先解密才能读取。
+
+#### 目录树解密算法
+
+```
+密码常量: PASSWORD_PVF = 0x81A79011
+校验码:   crc32 = header.dirTreeChecksum
+
+对目录树数据中每个 4 字节块进行解密:
+  block_decrypted = rotateRight32(block XOR PASSWORD_PVF XOR crc32, 6)
+```
+
+其中 rotateRight32(x, n) 表示将 32 位无符号整数循环右移 n 位：
+
+```typescript
+function rotateRight32(x: number, n: number): number {
+  return ((x >>> n) | (x << (32 - n))) >>> 0;
+}
+```
+
+#### 目录树条目格式
+
+每个文件条目的大小为 filePathLength + 20 字节：
+
+```
++------------------+------------+
+| fileNumber       | 4 bytes   | 文件序号
++------------------+------------+
+| filePathLength   | 4 bytes   | 文件路径长度 (字节)
++------------------+------------+
+| filePath         | N bytes   | 文件路径 (BIG5 编码)
++------------------+------------+
+| fileLength       | 4 bytes   | 文件数据长度
++------------------+------------+
+| fileCrc32        | 4 bytes   | 文件数据 CRC32 校验码
++------------------+------------+
+| relativeOffset   | 4 bytes   | 文件在数据区的相对偏移
++------------------+------------+
+```
+
+#### 文件路径解码
+
+文件路径存储为 **BIG5HKSCS**（繁体中文/香港增补字符集）编码，读取后需要转换为 UTF-8：
+
+```typescript
+const decoder = new TextDecoder("big5");
+const filePath = decoder.decode(filePathRaw);
+```
+
+韩文版 DNF 使用 **CP949** 编码（`new TextDecoder("euc-kr")`）。
+
+### 文件数据区
+
+文件数据区紧跟在目录树之后，存储了所有文件的实际内容。文件数据同样使用**加密**保护。
+
+#### 文件数据解密
+
+```
+密码常量: PASSWORD_PVF = 0x81A79011
+校验码:   crc32 = entry.fileCrc32  (每个文件自己的 CRC32)
+
+对文件数据中每个 4 字节块进行解密:
+  block_decrypted = rotateRight32(block XOR PASSWORD_PVF XOR crc32, 6)
+```
+
+#### 4 字节对齐
+
+文件数据在 PVF 中按 4 字节对齐存储：
+
+```typescript
+const alignedLength = (fileLength + 3) & ~3;  // 向上对齐到 4 的倍数
+```
+
+解密后需要将对齐产生的多余字节清零。
+
+#### 文件绝对偏移计算
+
+```typescript
+const absoluteOffset = PVF_HEADER_SIZE + dirTreeLength + entry.relativeOffset;
+// 即: 56 + dirTreeLength + relativeOffset
+```
+
+### 文件类型分发
+
+PVF 内的文件根据扩展名分为不同处理方式：
+
+| 扩展名 | 类型 | 说明 |
+|--------|------|------|
+| .ani | Animation | 动画文件，包含帧序列 |
+| .str | TextScript | 纯文本脚本，直接转码为 UTF-8 |
+| 其他 | Document | 结构化文档，使用自定义二进制格式 |
+
+### PVF 内部文件格式
+
+#### stringtable.bin
+
+字符串索引表，包含所有本地化字符串的键：
+
+```
++------------------+------------+
+| count            | 4 bytes   | 字符串数量
++------------------+------------+
+| startPos[0]      | 4 bytes   | 第 0 个字符串起始位置
++------------------+------------+
+| endPos[0]        | 4 bytes   | 第 0 个字符串结束位置
++------------------+------------+
+| ...              |           |
++------------------+------------+
+| stringData       | 后续数据   | BIG5 编码的字符串数据
++------------------+------------+
+```
+
+每个字符串: startPos[i] 和 endPos[i] 之间即为第 i 个字符串的长度和内容。
+
+#### n_string.lst
+
+字符串映射表，将 stringtable.bin 中的索引映射到实际的本地化文本：
+
+```
++------------------+------------+
+| magicNumber      | 2 bytes   | 固定值 0xD0B0 (53424)
++------------------+------------+
+| padding          | 4 bytes   |
++------------------+------------+
+| entry[0]         | 10 bytes  | 映射条目
+| entry[1]         | 10 bytes  |
+| ...              |           |
++------------------+------------+
+```
+
+每个映射条目 (10 bytes) 的偏移 6-10 字节为 stringtable.bin 的索引值。通过该索引可以查到文件名，再从 PVF 节点中读取对应的 `.str` 文件内容，解析 `key>value` 格式的本地化文本。
+
+#### Document 文档格式
+
+非 `.ani` / `.str` 的文件使用自定义的二进制键值格式：
+
+```
++------------------+------------+
+| header           | 2 bytes   | 文件头标识
++------------------+------------+
+| type_tag         | 1 byte    | 类型标签
++------------------+------------+
+| index            | 4 bytes   | 索引值 (指向 stringBinMap)
++------------------+------------+
+| ...              |           | 重复读取 type + index
++------------------+------------+
+```
+
+**类型标签 (ValueType)：**
+
+| 值 | 名称 | 说明 |
+|----|------|------|
+| 2 | Int | 整数值 |
+| 3 | IntEx | 扩展整数 |
+| 4 | Float | 浮点值 (4字节 reinterpret) |
+| 5 | Section | 节/节点名 (从 stringBinMap 取) |
+| 6 | Command | 命令字符串 |
+| 7 | String | 字符串 |
+| 8 | CommandSeparator | 命令分隔符 |
+| 9 | StringLinkIndex | 字符串链接索引 |
+| 10 | StringLink | 字符串链接 (从 stringStringMap 取) |
+
+节点嵌套使用 [section] / [/section] 标签，解析时使用栈结构处理层级关系。
 
 ## API
 

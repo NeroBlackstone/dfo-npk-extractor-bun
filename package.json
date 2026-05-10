@@ -1,6 +1,6 @@
 {
 	"name": "dfo-npk-extractor-bun",
-	"version": "0.2.0",
+	"version": "0.4.0",
 	"module": "index.ts",
 	"type": "module",
 	"private": true,
@@ -9,10 +9,10 @@
 		"build:all": "bun build --compile index.ts --outfile dist/npk-extractor-linux-x64-glibc --target bun-linux-x64 && bun build --compile index.ts --outfile dist/npk-extractor-linux-arm64-glibc --target bun-linux-arm64 && bun build --compile index.ts --outfile dist/npk-extractor-linux-x64-musl --target bun-linux-x64-musl && bun build --compile index.ts --outfile dist/npk-extractor-linux-arm64-musl --target bun-linux-arm64-musl && bun build --compile index.ts --outfile dist/npk-extractor-windows-x64.exe --target bun-windows-x64 && bun build --compile index.ts --outfile dist/npk-extractor-windows-arm64.exe --target bun-windows-arm64 && bun build --compile index.ts --outfile dist/npk-extractor-darwin-x64 --target bun-darwin-x64 && bun build --compile index.ts --outfile dist/npk-extractor-darwin-arm64 --target bun-darwin-arm64"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.9",
+		"@biomejs/biome": "2.4.15",
 		"@types/bun": "latest"
 	},
 	"peerDependencies": {
-		"typescript": "^6.0.2"
+		"typescript": "^6.0.3"
 	}
 }
