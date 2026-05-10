@@ -76,9 +76,7 @@ describe("AniFile.toTres", () => {
 		const ani = AniFile.fromPath(ANI_PATH);
 		const tres = ani.toTres("sprite");
 
-		expect(tres).toContain(
-			"res://sprite/test/sprite/album0/img.img/0.png",
-		);
+		expect(tres).toContain("res://sprite/test/sprite/album0/img.img/0.png");
 	});
 });
 

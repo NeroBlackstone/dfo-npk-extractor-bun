@@ -513,85 +513,266 @@ const absoluteOffset = PVF_HEADER_SIZE + dirTreeLength + entry.relativeOffset;
 
 ### 文件类型分发
 
-PVF 内的文件根据扩展名分为不同处理方式：
+PVF 内的文件按内容和格式可分为 **5 类**：
 
-| 扩展名 | 类型 | 说明 |
+#### 1. 纯文本文件
+
+直接存储文本内容，不需要反编译，按编码解码即可。
+
+| 扩展名 | 说明 | 编码 |
 |--------|------|------|
-| .ani | Animation | 动画文件，包含帧序列 |
-| .str | TextScript | 纯文本脚本，直接转码为 UTF-8 |
-| 其他 | Document | 结构化文档，使用自定义二进制格式 |
+| `.nut` | Squirrel 脚本 | EUC-KR (CP949) |
+| `.str` | 字符串表文本 | BIG5 |
+| `.txt` | 纯文本 | 通常是 EUC-KR |
+| `.xml` | XML 配置 | UTF-8 |
+| `.rtf` | RTF 文档 | - |
+
+#### 2. ScriptFile（脚本文件）
+
+前 2 字节固定为 `0xD0B0`，内部是二进制 token 流，需要反编译为 `#PVF_File` 格式。
+
+**二进制结构：**
+
+```
+[Header: 2 bytes] [Token: 5 bytes] [Token: 5 bytes] ...
+```
+
+- **Header**：`0xB0 0xD0`（小端读取为 `0xD0B0`），固定 2 字节
+- **Token**：每 5 字节一组，`[type: 1 byte][data: 4 bytes]`（LE），重复直到文件末尾
+
+**Token Type 定义：**
+
+| Type | 名称 | 说明 |
+|------|------|------|
+| 2 | Int | 普通整数，data 为 `int32 LE` |
+| 3 | IntEx | 扩展整数，data 为 `int32 LE` |
+| 4 | Float | 浮点数，data 为 `float32 LE` |
+| 5 | Section | 节名，data 为字符串表索引 |
+| 6 | Command | 命令标记，data 为字符串表索引 |
+| 7 | String | 字符串值，data 为字符串表索引 |
+| 8 | CommandSeparator | 命令分隔符，data 为字符串表索引 |
+| 9 | StringLinkIndex | 字符串链接索引，由 type 10 处理 |
+| 10 | StringLink | 字符串链接，data 为字符串表索引 |
+
+常见扩展名：
+
+- `.ai`、`.aic` — AI 脚本
+- `.skl` — 技能配置
+- `.stk` — 堆叠/消耗品配置
+- `.equ` — 装备配置
+- `.mob` — 怪物配置
+- `.map`、`.twn`、`.wdm` — 地图/城镇/世界地图
+- `.chr` — 角色配置
+- `.act` — 动作配置
+- `.atk` — 攻击信息
+- `.dgn` — 地下城配置
+- `.qst` — 任务配置
+- `.shp` — 商店配置
+- `.tbl` — 参数表
+- `.lst` — 列表文件
+- `.ui`、`.key`、`.co` — UI/按键/客户端配置
+
+#### 3. Binary ANI（二进制动画文件）
+
+`.ani` 动画文件，二进制格式，需要专门的反编译器解析为文本帧序列。
+
+##### 整体结构
+
+```
++------------------+------------+
+| framesCount      | 2 bytes   | 帧总数 (uint16)
++------------------+------------+
+| countOfResources | 2 bytes   | 资源路径数量 (uint16)
++------------------+------------+
+| resourceLen[i]   | 4 bytes   | 第 i 个资源路径长度 (int32)
++------------------+------------+
+| resourceStr[i]   | N bytes   | 资源路径字符串 (ASCII, null 结尾)
++------------------+------------+
+| animParamCount   | 2 bytes   | 动画级参数数量 (uint16)
++------------------+------------+
+| animParam[0]     | ...       | 动画级参数 (类型+数据)
++------------------+------------+
+| ...              |           |
++------------------+------------+
+| frame[0]         | ...       | 帧数据
++------------------+------------+
+| frame[1]         | ...       |
++------------------+------------+
+| ...              |           |
++------------------+------------+
+```
+
+##### 动画级参数
+
+每个参数由 `type(2 bytes)` + `data` 组成，部分类型不带额外数据：
+
+| type | 名称 | 额外数据 | 说明 |
+|------|------|----------|------|
+| 0 | LOOP | 1 byte (int8) | 是否循环播放 |
+| 1 | SHADOW | 1 byte (int8) | 是否显示阴影 |
+| 3 | COORD | 2 bytes (uint16) | 坐标系 |
+| 28 | OPERATION | 2 bytes (uint16) | 操作类型 |
+| 18 | SPECTRUM | 17 bytes | 光谱效果参数 |
+
+##### 帧数据结构
+
+每帧由碰撞盒 + 图像引用 + 坐标 + 帧属性组成：
+
+```
++------------------+------------+
+| boxCount         | 2 bytes   | 碰撞盒数量 (uint16)
++------------------+------------+
+| box[0].type      | 2 bytes   | 14=DAMAGE_BOX, 15=ATTACK_BOX
++------------------+------------+
+| box[0].values    | 24 bytes  | 6 × int32
++------------------+------------+
+| ...              |           | 重复 boxCount 次
++------------------+------------+
+| imgId            | 2 bytes   | 资源索引 (int16), -1 表示无图像
++------------------+------------+
+| imgParam         | 2 bytes   | 图像参数 (uint16), 仅 imgId >= 0 时存在
++------------------+------------+
+| x                | 4 bytes   | X 坐标 (int32)
++------------------+------------+
+| y                | 4 bytes   | Y 坐标 (int32)
++------------------+------------+
+| propertyCount    | 2 bytes   | 帧属性数量 (uint16)
++------------------+------------+
+| property[0]      | ...       | 帧属性 (类型+数据)
++------------------+------------+
+| ...              |           |
++------------------+------------+
+```
+
+##### 帧属性类型
+
+每个帧属性由 `type(2 bytes)` + `data` 组成：
+
+| type | 名称 | 额外数据 | 说明 |
+|------|------|----------|------|
+| 0 | LOOP | 1 byte (int8) | 是否循环 |
+| 1 | SHADOW | 1 byte (int8) | 是否显示阴影 |
+| 10 | INTERPOLATION | 1 byte (int8) | 是否启用插值 |
+| 3 | COORD | 2 bytes (uint16) | 坐标系 |
+| 7 | IMAGE_RATE | 8 bytes | rateX(float) + rateY(float) |
+| 8 | IMAGE_ROTATE | 4 bytes | rotate(float) |
+| 9 | RGBA | 4 bytes | R,G,B,A 各 1 字节 |
+| 11 | GRAPHIC_EFFECT | 可变 | 图形特效（含 MONOCHROME/SPACEDISTORT 子类型） |
+| 12 | DELAY | 4 bytes (int32) | 帧延迟(ms) |
+| 13 | DAMAGE_TYPE | 2 bytes (uint16) | 伤害类型 |
+| 16 | PLAY_SOUND | 可变 | 4 bytes 长度 + N bytes 音效路径 |
+| 23 | SET_FLAG | 4 bytes (int32) | 标志位 |
+| 24 | FLIP_TYPE | 2 bytes (uint16) | 翻转类型 (1=水平, 2=垂直, 3=全部) |
+| 25 | LOOP_START | 无 | 循环起始标记 |
+| 26 | LOOP_END | 4 bytes (int32) | 循环结束标记 |
+| 27 | CLIP | 8 bytes | 4 × int16 裁剪区域 |
+| 2, 4, 5, 6, 19-22 | 未知 | 无数据 | 保留/废弃类型，直接跳过 |
+
+#### 4. Document 文件
+
+二进制文档格式，与 ScriptFile 不同：
+
+- 前 2 字节是 magic header（值为 `0x0002`）
+- 内部有开闭标签结构，如 `[element]`、`[/element]`
+- 需要 `stringtable.bin` 来解析标签名
+- 例如部分 `.img`、`.hsp`、`.lay`、`.cbt`、`.pet` 等文件
+
+**二进制结构：**
+
+```
+[Header: 2 bytes] [Token: 5 bytes] [Token: 5 bytes] ...
+```
+
+- **Header**：`0x02 0x00`（小端读取为 `0x0002`），固定 2 字节
+- **Token**：与 ScriptFile 相同，每 5 字节一组，`[type: 1 byte][data: 4 bytes]`（LE）
+
+**Token Type 定义（与 ScriptFile 共用）：**
+
+| Type | 名称 | 说明 |
+|------|------|------|
+| 2 | Int | 普通整数，data 为 `int32 LE` |
+| 3 | IntEx | 扩展整数，data 为 `int32 LE` |
+| 4 | Float | 浮点数，data 为 `float32 LE` |
+| 5 | Section | 标签名（如 `[tagname]`、`[/tagname]`），data 为字符串表索引 |
+| 6 | Command | 命令标记，data 为字符串表索引 |
+| 7 | String | 字符串值，data 为字符串表索引 |
+| 8 | CommandSeparator | 命令分隔符，data 为字符串表索引 |
+| 9 | StringLinkIndex | 字符串链接索引，由 type 10 处理 |
+| 10 | StringLink | 字符串链接，data 为字符串表索引 |
+
+**与 ScriptFile 的区别：**
+
+- ScriptFile 是扁平 token 流，输出为 `#PVF_File` 格式的脚本文本
+- Document 是树形结构，type 5 (Section) 的字符串表值格式为 `[tagname]`（开标签）或 `[/tagname]`（闭标签），解析为嵌套 XML 树
+
+#### 5. 原始二进制文件
+
+不需要解析，直接原样写出。
+
+| 扩展名 | 说明 |
+|--------|------|
+| `.bin` | `stringtable.bin` 等 |
+| `.exe` | 可执行文件 |
+| `.img` | 图片原始数据（非 Document 的） |
+| `.info`、`.evn`、`.pos` 等 | 其他二进制数据 |
+
+### 判断逻辑
+
+代码层面的文件类型判断优先级（`src/pvf/extract.ts`）：
+
+```
+if (扩展名 === .ani)           → Binary ANI（反编译）
+else if (扩展名 === .str)      → BIG5 文本
+else if (扩展名 === .nut)      → EUC-KR 文本
+else if (排除 stringtable.bin / n_string.lst 且 data.length > 7)
+  ├─ if (isScriptFile(data))   → ScriptFile（前 2 字节 === 0xD0B0）
+  └─ else                      → Document（尝试解析，失败则原样写出）
+else                           → 原始二进制
+```
+
+注意：代码中不显式检查 `0x0002` 魔数，而是对所有未匹配扩展名的文件先尝试 ScriptFile 解析（`isScriptFile` 检查 `0xD0B0`），失败后尝试 Document 解析（try/catch），再失败则作为原始二进制处理。
+
+---
 
 ### PVF 内部文件格式
 
 #### stringtable.bin
 
-字符串索引表，包含所有本地化字符串的键：
+字符串索引表，包含所有 ScriptFile / Document 中引用的字符串键：
 
 ```
 +------------------+------------+
 | count            | 4 bytes   | 字符串数量
 +------------------+------------+
-| startPos[0]      | 4 bytes   | 第 0 个字符串起始位置
+| offset[0]        | 4 bytes   | 第 0 个字符串相对偏移
 +------------------+------------+
-| endPos[0]        | 4 bytes   | 第 0 个字符串结束位置
+| offset[1]        | 4 bytes   | 第 1 个字符串相对偏移
 +------------------+------------+
-| ...              |           |
+| ...              | count+1 个 | 偏移表（offset[count] 为总长度）
 +------------------+------------+
 | stringData       | 后续数据   | BIG5 编码的字符串数据
 +------------------+------------+
 ```
 
-每个字符串: startPos[i] 和 endPos[i] 之间即为第 i 个字符串的长度和内容。
+第 `i` 个字符串长度 = `offset[i+1] - offset[i]`，起始位置 = `offset[i] + 4`（偏移表本身占 4 字节，但代码中实际偏移需要再 +4）。
 
 #### n_string.lst
 
-字符串映射表，将 stringtable.bin 中的索引映射到实际的本地化文本：
+`.str` 文件索引映射表，本身是 **ScriptFile**（header `0xD0B0`），但当前提取器使用简化的硬编码解析：
 
 ```
 +------------------+------------+
-| magicNumber      | 2 bytes   | 固定值 0xD0B0 (53424)
+| header           | 2 bytes   | 0xD0B0 (ScriptFile 标识)
 +------------------+------------+
-| padding          | 4 bytes   |
+| padding          | 6 bytes   | 每条目前 6 字节填充
 +------------------+------------+
-| entry[0]         | 10 bytes  | 映射条目
-| entry[1]         | 10 bytes  |
-| ...              |           |
+| index            | 4 bytes   | stringtable.bin 中的索引
 +------------------+------------+
-```
-
-每个映射条目 (10 bytes) 的偏移 6-10 字节为 stringtable.bin 的索引值。通过该索引可以查到文件名，再从 PVF 节点中读取对应的 `.str` 文件内容，解析 `key>value` 格式的本地化文本。
-
-#### Document 文档格式
-
-非 `.ani` / `.str` 的文件使用自定义的二进制键值格式：
-
-```
-+------------------+------------+
-| header           | 2 bytes   | 文件头标识
-+------------------+------------+
-| type_tag         | 1 byte    | 类型标签
-+------------------+------------+
-| index            | 4 bytes   | 索引值 (指向 stringBinMap)
-+------------------+------------+
-| ...              |           | 重复读取 type + index
+| ...              |           | 重复 6 bytes padding + 4 bytes index
 +------------------+------------+
 ```
 
-**类型标签 (ValueType)：**
-
-| 值 | 名称 | 说明 |
-|----|------|------|
-| 2 | Int | 整数值 |
-| 3 | IntEx | 扩展整数 |
-| 4 | Float | 浮点值 (4字节 reinterpret) |
-| 5 | Section | 节/节点名 (从 stringBinMap 取) |
-| 6 | Command | 命令字符串 |
-| 7 | String | 字符串 |
-| 8 | CommandSeparator | 命令分隔符 |
-| 9 | StringLinkIndex | 字符串链接索引 |
-| 10 | StringLink | 字符串链接 (从 stringStringMap 取) |
-
-节点嵌套使用 [section] / [/section] 标签，解析时使用栈结构处理层级关系。
+通过该索引从 `stringtable.bin` 查到 `.str` 文件名，再读取对应的 `.str` 文件内容，解析 `key>value` 格式的本地化文本。
 
 ## API
 

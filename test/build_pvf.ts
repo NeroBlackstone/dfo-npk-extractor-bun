@@ -2,15 +2,32 @@ import { writeFileSync } from "node:fs";
 
 const PASSWORD_PVF = 0x81a79011;
 
+// CRC32 查表法
+const crc32Table = new Uint32Array(256);
+for (let i = 0; i < 256; i++) {
+	let c = i;
+	for (let j = 0; j < 8; j++) {
+		c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+	}
+	crc32Table[i] = c;
+}
+function crc32(buf: Buffer): number {
+	let crc = 0xffffffff;
+	for (let i = 0; i < buf.length; i++) {
+		crc = crc32Table[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
+	}
+	return (crc ^ 0xffffffff) >>> 0;
+}
+
 function rotateLeft32(x: number, n: number): number {
 	x = x >>> 0;
 	return ((x << n) | (x >>> (32 - n))) >>> 0;
 }
 
-function encryptPvfData(data: Uint8Array, len: number, crc32: number): void {
+function encryptPvfData(data: Uint8Array, len: number, crc: number): void {
 	const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 	const wordCount = Math.floor(len / 4);
-	const key = ((PASSWORD_PVF ^ crc32) >>> 0);
+	const key = (PASSWORD_PVF ^ crc) >>> 0;
 
 	for (let i = 0; i < wordCount; i++) {
 		const offset = i * 4;
@@ -20,80 +37,263 @@ function encryptPvfData(data: Uint8Array, len: number, crc32: number): void {
 	}
 }
 
+function writeToken(
+	buf: Buffer,
+	offset: number,
+	type: number,
+	value: number,
+): number {
+	buf.writeUInt8(type, offset);
+	buf.writeInt32LE(value, offset + 1);
+	return offset + 5;
+}
+
+/**
+ * 构建 ScriptFile 二进制内容
+ * 前 2 字节 0xD0B0，之后是 5 字节 token 流
+ */
+function buildScriptFileContent(): Buffer {
+	// token 流: Section("section_name") + Int(42) + Float(3.14)
+	// stringBinMap 索引: 0="[section_name]", 1="some_string"
+	const buf = Buffer.alloc(2 + 5 * 3 + 10); // header + 3 tokens + padding
+	let off = 0;
+	// header
+	buf.writeUInt16LE(0xd0b0, off);
+	off += 2;
+	// Section token (type=5, index=0 → "[section_name]")
+	off = writeToken(buf, off, 5, 0);
+	// Int token (type=2, value=42)
+	off = writeToken(buf, off, 2, 42);
+	// Float token (type=4, 需要写入浮点的 int32 表示)
+	const floatBuf = Buffer.alloc(4);
+	floatBuf.writeFloatLE(3.14, 0);
+	off = writeToken(buf, off, 4, floatBuf.readInt32LE(0));
+	return buf.subarray(0, off);
+}
+
+/**
+ * 构建 Document 二进制内容
+ * 前 2 字节 0x0002，之后是 5 字节 token 流
+ */
+function buildDocumentContent(): Buffer {
+	// stringBinMap 索引: 0="[element]", 1="[/element]", 2="some_text"
+	const buf = Buffer.alloc(2 + 5 * 3);
+	let off = 0;
+	// header (0x0002)
+	buf.writeInt16LE(0x0002, off);
+	off += 2;
+	// 开标签 [element] (Section token, index=0)
+	off = writeToken(buf, off, 5, 0);
+	// 字符串 "some_text" (String token, index=2)
+	off = writeToken(buf, off, 7, 2);
+	// 闭标签 [/element] (Section token, index=1)
+	off = writeToken(buf, off, 5, 1);
+	return buf.subarray(0, off);
+}
+
+/**
+ * 构建 Binary ANI 二进制内容
+ */
+function buildAniContent(): Buffer {
+	// 2 帧, 1 个资源路径, 0 个动画级参数
+	const resources = ["test/resource.img\0"];
+	const resLen = Buffer.byteLength(resources[0], "ascii");
+
+	// framesCount(2) + countOfResources(2) + resLen(4) + resStr + paramsCount(2) + 2 frames * (boxes(2) + imgId(2) + imgParam(2) + x(4) + y(4) + propCount(2))
+	const frameSize = 2 + 2 + 2 + 4 + 4 + 2; // boxes=0, imgId, imgParam, x, y, propertyCount=0
+	const totalSize = 2 + 2 + 4 + resLen + 2 + frameSize * 2;
+
+	const buf = Buffer.alloc(totalSize);
+	let off = 0;
+
+	// framesCount = 2
+	buf.writeUInt16LE(2, off);
+	off += 2;
+	// countOfResources = 1
+	buf.writeUInt16LE(1, off);
+	off += 2;
+	// resource string length
+	buf.writeInt32LE(resLen, off);
+	off += 4;
+	// resource string
+	buf.write(resources[0], off, "ascii");
+	off += resLen;
+	// animation-level params count = 0
+	buf.writeUInt16LE(0, off);
+	off += 2;
+
+	// Frame 0
+	buf.writeUInt16LE(0, off);
+	off += 2; // boxes = 0
+	buf.writeInt16LE(0, off);
+	off += 2; // imgId = 0
+	buf.writeUInt16LE(0, off);
+	off += 2; // imgParam = 0
+	buf.writeInt32LE(10, off);
+	off += 4; // x = 10
+	buf.writeInt32LE(20, off);
+	off += 4; // y = 20
+	buf.writeUInt16LE(0, off);
+	off += 2; // propertyCount = 0
+
+	// Frame 1
+	buf.writeUInt16LE(0, off);
+	off += 2; // boxes = 0
+	buf.writeInt16LE(0, off);
+	off += 2; // imgId = 0
+	buf.writeUInt16LE(0, off);
+	off += 2; // imgParam = 0
+	buf.writeInt32LE(30, off);
+	off += 4; // x = 30
+	buf.writeInt32LE(40, off);
+	off += 4; // y = 40
+	buf.writeUInt16LE(0, off);
+	off += 2; // propertyCount = 0
+
+	return buf.subarray(0, off);
+}
+
 // 创建假的 PVF 文件
 function buildFakePvf(): Buffer {
 	const dirTreeChecksum = 0xaabbccdd;
 	const fileVersion = 1;
 
-	// 文件1: test/hello.txt
+	// 文件1: test/hello.txt (纯文本)
 	const path1 = "test/hello.txt";
-	const content1 = Buffer.from("Hello, PVF!", "utf-8"); // 11 bytes
-	const crc1 = 0x12345678;
+	const content1 = Buffer.from("Hello, PVF!", "utf-8");
+	const crc1 = crc32(content1);
 
-	// 文件2: test/world.bin
+	// 文件2: test/world.bin (原始二进制)
 	const path2 = "test/world.bin";
-	const content2 = Buffer.from([0x01, 0x02, 0x03, 0x04, 0x05]); // 5 bytes
-	const crc2 = 0x87654321;
+	const content2 = Buffer.from([0x01, 0x02, 0x03, 0x04, 0x05]);
+	const crc2 = crc32(content2);
+
+	// 文件3: test/character.ai (ScriptFile, 0xD0B0)
+	const path3 = "test/character.ai";
+	const content3 = buildScriptFileContent();
+	const crc3 = crc32(content3);
+
+	// 文件4: test/move.ani (Binary ANI)
+	const path4 = "test/move.ani";
+	const content4 = buildAniContent();
+	const crc4 = crc32(content4);
+
+	// 文件5: test/layout.img (Document, 0x0002)
+	const path5 = "test/layout.img";
+	const content5 = buildDocumentContent();
+	const crc5 = crc32(content5);
+
+	const files: {
+		path: string;
+		content: Buffer;
+		crc: number;
+		alignedLength: number;
+		relativeOffset: number;
+	}[] = [
+		{
+			path: path1,
+			content: content1,
+			crc: crc1,
+			alignedLength: 0,
+			relativeOffset: 0,
+		},
+		{
+			path: path2,
+			content: content2,
+			crc: crc2,
+			alignedLength: 0,
+			relativeOffset: 0,
+		},
+		{
+			path: path3,
+			content: content3,
+			crc: crc3,
+			alignedLength: 0,
+			relativeOffset: 0,
+		},
+		{
+			path: path4,
+			content: content4,
+			crc: crc4,
+			alignedLength: 0,
+			relativeOffset: 0,
+		},
+		{
+			path: path5,
+			content: content5,
+			crc: crc5,
+			alignedLength: 0,
+			relativeOffset: 0,
+		},
+	];
+
+	// 计算每个文件的对齐长度和相对偏移
+	let totalDataLength = 0;
+	for (const f of files) {
+		f.alignedLength = (f.content.length + 3) & 0xfffffffc;
+		f.relativeOffset = totalDataLength;
+		totalDataLength += f.alignedLength;
+	}
 
 	// 构建目录树（明文）
-	const path1Bytes = Buffer.from(path1 + "\0", "latin1");
-	const path2Bytes = Buffer.from(path2 + "\0", "latin1");
+	let dirTreeSize = 0;
+	for (const f of files) {
+		const pathBytes = Buffer.from(`${f.path}\0`, "latin1");
+		dirTreeSize += 4 + 4 + pathBytes.length + 4 + 4 + 4;
+	}
 
-	const entry1Size = 4 + 4 + path1Bytes.length + 4 + 4 + 4;
-	const entry2Size = 4 + 4 + path2Bytes.length + 4 + 4 + 4;
-	const dirTreeLength = entry1Size + entry2Size;
-
-	const dirTree = Buffer.alloc(dirTreeLength);
+	const dirTree = Buffer.alloc(dirTreeSize);
 	let offset = 0;
 
-	// 条目1
-	dirTree.writeUInt32LE(0, offset); offset += 4;
-	dirTree.writeInt32LE(path1Bytes.length, offset); offset += 4;
-	path1Bytes.copy(dirTree, offset); offset += path1Bytes.length;
-	dirTree.writeInt32LE(content1.length, offset); offset += 4;
-	dirTree.writeUInt32LE(crc1, offset); offset += 4;
-	dirTree.writeInt32LE(0, offset); offset += 4;
+	for (let i = 0; i < files.length; i++) {
+		const f = files[i];
+		const pathBytes = Buffer.from(`${f.path}\0`, "latin1");
 
-	// 条目2
-	const content1Aligned = (content1.length + 3) & 0xfffffffc;
-	dirTree.writeUInt32LE(1, offset); offset += 4;
-	dirTree.writeInt32LE(path2Bytes.length, offset); offset += 4;
-	path2Bytes.copy(dirTree, offset); offset += path2Bytes.length;
-	dirTree.writeInt32LE(content2.length, offset); offset += 4;
-	dirTree.writeUInt32LE(crc2, offset); offset += 4;
-	dirTree.writeInt32LE(content1Aligned, offset); offset += 4;
+		dirTree.writeUInt32LE(i, offset);
+		offset += 4;
+		dirTree.writeInt32LE(pathBytes.length, offset);
+		offset += 4;
+		pathBytes.copy(dirTree, offset);
+		offset += pathBytes.length;
+		dirTree.writeInt32LE(f.content.length, offset);
+		offset += 4;
+		dirTree.writeUInt32LE(f.crc, offset);
+		offset += 4;
+		dirTree.writeInt32LE(f.relativeOffset, offset);
+		offset += 4;
+	}
 
 	// 加密目录树
 	const dirTreeEncrypted = new Uint8Array(dirTree);
-	encryptPvfData(dirTreeEncrypted, dirTreeLength, dirTreeChecksum);
+	encryptPvfData(dirTreeEncrypted, dirTreeSize, dirTreeChecksum);
 
-	// 构建文件数据区（明文）
-	const content2Aligned = (content2.length + 3) & 0xfffffffc;
-	const dataSectionLength = content1Aligned + content2Aligned;
-	const dataSection = Buffer.alloc(dataSectionLength);
-	content1.copy(dataSection, 0);
-	content2.copy(dataSection, content1Aligned);
+	// 构建文件数据区
+	const dataSection = Buffer.alloc(totalDataLength);
+	for (const f of files) {
+		f.content.copy(dataSection, f.relativeOffset);
 
-	// 分别加密每个文件的数据
-	const data1Encrypted = new Uint8Array(dataSection.subarray(0, content1Aligned));
-	encryptPvfData(data1Encrypted, content1Aligned, crc1);
-	Buffer.from(data1Encrypted).copy(dataSection, 0);
-
-	const data2Encrypted = new Uint8Array(dataSection.subarray(content1Aligned, content1Aligned + content2Aligned));
-	encryptPvfData(data2Encrypted, content2Aligned, crc2);
-	Buffer.from(data2Encrypted).copy(dataSection, content1Aligned);
+		// 加密每个文件的数据
+		const encrypted = new Uint8Array(
+			dataSection.subarray(
+				f.relativeOffset,
+				f.relativeOffset + f.alignedLength,
+			),
+		);
+		encryptPvfData(encrypted, f.alignedLength, f.crc);
+		Buffer.from(encrypted).copy(dataSection, f.relativeOffset);
+	}
 
 	// 构建 Header
 	const header = Buffer.alloc(56);
 	header.writeInt32LE(0x24, 0);
 	header.writeInt32LE(fileVersion, 40);
-	header.writeInt32LE(dirTreeLength, 44);
+	header.writeInt32LE(dirTreeSize, 44);
 	header.writeUInt32LE(dirTreeChecksum, 48);
-	header.writeInt32LE(2, 52);
+	header.writeInt32LE(files.length, 52);
 
 	return Buffer.concat([header, Buffer.from(dirTreeEncrypted), dataSection]);
 }
 
 const pvfData = buildFakePvf();
 writeFileSync("test/fake.pvf", pvfData);
-console.log(`Generated fake.pvf (${pvfData.length} bytes)`);
+console.log(`Generated fake.pvf (${pvfData.length} bytes, 5 files)`);
