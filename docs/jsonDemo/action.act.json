@@ -1,0 +1,28 @@
+{
+  "name": "@0::swordman_slash",
+
+  "frame_data": {
+    "total_frames": 8,
+    "frame_rate": 60
+  },
+
+  "attack_box": {
+    "x": 50,
+    "y": -20,
+    "width": 100,
+    "height": 40,
+    "damage": [100, 120, 140],
+    "hit_count": 1
+  },
+
+  "effect": {
+    "hit_effect": "@1::fx_slash_hit",
+    "sound": "@2::snd_slash"
+  },
+
+  "cancel": {
+    "can_cancel": true,
+    "cancel_frame": 6,
+    "cancel_to": ["@3::uppercut", "@4::slide"]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@0::hp_potion",
+  "type": "@1::consumable",
+  "level": 1,
+  "rarity": "@2::common",
+
+  "status": {
+    "price": 100,
+    "stack_max": 99,
+    "weight": 0.1
+  },
+
+  "effect": {
+    "hp_restore": 50,
+    "mp_restore": 0,
+    "duration": 0
+  },
+
+  "require": {
+    "level": 1,
+    "physical_strength": 0
+  },
+
+  "description": "@3::desc_hp_potion"
+}

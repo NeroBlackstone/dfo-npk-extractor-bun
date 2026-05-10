@@ -1,0 +1,23 @@
+{
+  "name": "@0::dungeon_entrance",
+  "type": "@1::field_map",
+  "level": [5, 15],
+
+  "size": [2000, 1000],
+  "background": "@2::bg_dungeon_entrance",
+  "music": "@3::bgm_field_01",
+
+  "spawn_point": [
+    {"x": 100, "y": 500, "direction": "right"},
+    {"x": 1900, "y": 500, "direction": "left"}
+  ],
+
+  "portal": [
+    {"x": 1950, "y": 500, "target": "@4::dungeon_1f", "target_x": 50, "target_y": 500},
+    {"x": 50, "y": 500, "target": "@5::town", "target_x": 1800, "target_y": 500}
+  ],
+
+  "mob_area": [
+    {"x": 500, "y": 300, "width": 400, "height": 400, "mob_list": ["@6::slime", "@7::goblin"]}
+  ]
+}

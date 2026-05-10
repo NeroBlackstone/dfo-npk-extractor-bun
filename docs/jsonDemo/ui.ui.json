@@ -1,0 +1,22 @@
+{
+  "name": "@0::inventory_ui",
+
+  "size": [400, 300],
+  "position": [100, 100],
+
+  "slot": {
+    "row": 4,
+    "column": 6,
+    "slot_size": [48, 48]
+  },
+
+  "button": {
+    "close": {"x": 370, "y": 10, "width": 20, "height": 20},
+    "sort": {"x": 10, "y": 270, "width": 80, "height": 25}
+  },
+
+  "text": {
+    "title": {"x": 10, "y": 10, "text": "@1::ui_inventory_title"},
+    "weight": {"x": 10, "y": 250, "text": "@2::ui_weight"}
+  }
+}

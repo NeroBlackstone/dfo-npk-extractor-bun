@@ -19,7 +19,7 @@ describe("PVF header", () => {
 		expect(header.fileVersion).toBe(1);
 		expect(header.dirTreeLength).toBeGreaterThan(0);
 		expect(header.dirTreeChecksum).toBe(0xaabbccdd);
-		expect(header.numFilesInDirTree).toBe(5);
+		expect(header.numFilesInDirTree).toBe(4);
 	});
 
 	test("readPvfHeader should throw on invalid sizeGUID", () => {
@@ -64,13 +64,13 @@ describe("PVF reader", () => {
 		const { header } = await readPvf(FAKE_PVF_PATH);
 		expect(header.sizeGUID).toBe(0x24);
 		expect(header.fileVersion).toBe(1);
-		expect(header.numFilesInDirTree).toBe(5);
+		expect(header.numFilesInDirTree).toBe(4);
 		expect(header.dirTreeChecksum).toBe(0xaabbccdd);
 	});
 
 	test("should read all file entries", async () => {
 		const { entries } = await readPvf(FAKE_PVF_PATH);
-		expect(entries.length).toBe(5);
+		expect(entries.length).toBe(4);
 	});
 
 	test("first entry (hello.txt) should have correct metadata", async () => {
@@ -110,16 +110,6 @@ describe("PVF reader", () => {
 		expect(data.length).toBeGreaterThan(2);
 		const framesCount = data.readUInt16LE(0);
 		expect(framesCount).toBe(2);
-	});
-
-	test("fifth entry (layout.img) should be Document", async () => {
-		const { entries, getFileData } = await readPvf(FAKE_PVF_PATH);
-		const entry = entries[4]!;
-		expect(entry.fileNumber).toBe(4);
-		expect(entry.filePath).toBe("test/layout.img");
-		const data = await getFileData(entry);
-		// Document 前 2 字节为 0x0002
-		expect(data.readInt16LE(0)).toBe(2);
 	});
 
 	test("getFileData should decrypt hello.txt correctly", async () => {

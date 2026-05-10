@@ -1,0 +1,31 @@
+{
+  "name": "@0::slime_ai",
+
+  "state_list": {
+    "idle": {
+      "command": ["(WAIT)"],
+      "next": ["move", "attack"]
+    },
+    "move": {
+      "command": ["(UP)", "(RIGHT)"],
+      "duration": 2000,
+      "next": ["idle"]
+    },
+    "attack": {
+      "command": ["(SKILL)", "(ATTACK)"],
+      "next": ["idle"]
+    }
+  },
+
+  "condition": {
+    "detect_range": 200,
+    "attack_range": 50,
+    "hp_threshold": 0.3
+  },
+
+  "behavior": {
+    "aggro": true,
+    "retreat": false,
+    "patrol": true
+  }
+}

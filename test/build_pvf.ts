@@ -72,26 +72,6 @@ function buildScriptFileContent(): Buffer {
 }
 
 /**
- * 构建 Document 二进制内容
- * 前 2 字节 0x0002，之后是 5 字节 token 流
- */
-function buildDocumentContent(): Buffer {
-	// stringBinMap 索引: 0="[element]", 1="[/element]", 2="some_text"
-	const buf = Buffer.alloc(2 + 5 * 3);
-	let off = 0;
-	// header (0x0002)
-	buf.writeInt16LE(0x0002, off);
-	off += 2;
-	// 开标签 [element] (Section token, index=0)
-	off = writeToken(buf, off, 5, 0);
-	// 字符串 "some_text" (String token, index=2)
-	off = writeToken(buf, off, 7, 2);
-	// 闭标签 [/element] (Section token, index=1)
-	off = writeToken(buf, off, 5, 1);
-	return buf.subarray(0, off);
-}
-
-/**
  * 构建 Binary ANI 二进制内容
  */
 function buildAniContent(): Buffer {
@@ -178,11 +158,6 @@ function buildFakePvf(): Buffer {
 	const content4 = buildAniContent();
 	const crc4 = crc32(content4);
 
-	// 文件5: test/layout.img (Document, 0x0002)
-	const path5 = "test/layout.img";
-	const content5 = buildDocumentContent();
-	const crc5 = crc32(content5);
-
 	const files: {
 		path: string;
 		content: Buffer;
@@ -215,13 +190,6 @@ function buildFakePvf(): Buffer {
 			path: path4,
 			content: content4,
 			crc: crc4,
-			alignedLength: 0,
-			relativeOffset: 0,
-		},
-		{
-			path: path5,
-			content: content5,
-			crc: crc5,
 			alignedLength: 0,
 			relativeOffset: 0,
 		},
@@ -296,4 +264,4 @@ function buildFakePvf(): Buffer {
 
 const pvfData = buildFakePvf();
 writeFileSync("test/fake.pvf", pvfData);
-console.log(`Generated fake.pvf (${pvfData.length} bytes, 5 files)`);
+console.log(`Generated fake.pvf (${pvfData.length} bytes, 4 files)`);

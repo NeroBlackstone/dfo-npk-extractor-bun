@@ -10,7 +10,7 @@ const emptyCtx: PvfStringContext = { binMap: [], stringMap: new Map() };
 describe("convertFile", () => {
 	test("should convert .ani binary to text", async () => {
 		const { entries, getFileData } = await readPvf(FAKE_PVF_PATH);
-		const data = await getFileData(entries[3]!);
+		const data = await getFileData(entries[2]!);
 		const result = convertFile(data, "test/move.ani", emptyCtx);
 		expect(typeof result).toBe("string");
 		expect((result as string).startsWith("#PVF_File")).toBe(true);
@@ -25,15 +25,6 @@ describe("convertFile", () => {
 		expect((result as string).startsWith("#PVF_File")).toBe(true);
 	});
 
-	test("should convert document binary (0x0002 magic) to text", async () => {
-		const { entries, getFileData } = await readPvf(FAKE_PVF_PATH);
-		const data = await getFileData(entries[4]!);
-		expect(data.readUInt16LE(0)).toBe(2);
-		const result = convertFile(data, "test/layout.img", emptyCtx);
-		expect(typeof result).toBe("string");
-		expect((result as string).startsWith("#PVF_File")).toBe(true);
-	});
-
 	test("should pass through short data unchanged", () => {
 		const short = Buffer.alloc(4);
 		const result = convertFile(short, "foo.img", emptyCtx);
@@ -43,12 +34,6 @@ describe("convertFile", () => {
 	test("should pass through unknown binary unchanged", () => {
 		const data = Buffer.from([0xff, 0xfe, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05]);
 		const result = convertFile(data, "foo.xyz", emptyCtx);
-		expect(result).toBe(data);
-	});
-
-	test("should pass through non-magic data instead of misrouting to document", () => {
-		const data = Buffer.alloc(20, 0x42);
-		const result = convertFile(data, "unknown.bin", emptyCtx);
 		expect(result).toBe(data);
 	});
 

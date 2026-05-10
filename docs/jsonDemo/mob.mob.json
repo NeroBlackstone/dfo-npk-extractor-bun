@@ -1,0 +1,33 @@
+{
+  "name": "スライム",
+  "level": [10, 20],
+  "width": [40, 10],
+
+  "common_champion_elemental_property": [
+    "@0::water_element",
+    "@0::dark_element"
+  ],
+
+  "ability_category": [
+    "@1::hp_max", "*", 140,
+    "@1::phys_atk", "*", 100
+  ],
+
+  "category": [
+    "@2::undead",
+    "@2::melee_combat"
+  ],
+
+  "action_info": {
+    "stand": {
+      "command": ["(WAIT)"]
+    },
+    "move": {
+      "command": ["(UP)", "(RIGHT)"]
+    },
+    "attack": {
+      "command": ["(SKILL)", "(ATTACK)"],
+      "delay": 500
+    }
+  }
+}

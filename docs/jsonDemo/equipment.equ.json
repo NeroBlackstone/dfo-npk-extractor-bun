@@ -1,0 +1,20 @@
+{
+  "name": "@0::iron_sword",
+  "level": 10,
+  "type": "@1::weapon",
+
+  "status": {
+    "physical_attack": 25,
+    "magical_attack": 0,
+    "attack_speed": 100
+  },
+
+  "require": {
+    "level": 10,
+    "physical_strength": 15
+  },
+
+  "option": [
+    "@2::critical_rate", "+", 5
+  ]
+}
