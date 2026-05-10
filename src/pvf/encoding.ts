@@ -3,6 +3,7 @@
 const big5Decoder = new TextDecoder("big5" as any);
 const eucKrDecoder = new TextDecoder("euc-kr" as any);
 
+
 /**
  * 将 buffer 数据用 BIG5 编码解码为 UTF-8 文本
  */
@@ -16,4 +17,15 @@ export function decodeBig5(data: Buffer): string {
  */
 export function decodeEucKr(data: Buffer): string {
 	return eucKrDecoder.decode(data);
+}
+
+/**
+ * 自动检测编码并解码 buffer 为 UTF-8 文本
+ * 检测策略：用 CP949 解码，如果包含韩文音节则用 CP949，否则用 Big5
+ */
+export function decodeAuto(data: Buffer): string {
+	const eucKrResult = eucKrDecoder.decode(data);
+	// 韩文音节范围 U+AC00-U+D7AF
+	if (/[가-힯]/.test(eucKrResult)) return eucKrResult;
+	return big5Decoder.decode(data);
 }

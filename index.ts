@@ -16,9 +16,13 @@ const { positionals, values } = parseArgs({
 			type: "boolean",
 			default: false,
 		},
-		"ani-dir": {
+		"npk-dir": {
 			type: "string",
 			default: WORK_DIR,
+		},
+		pvf: {
+			type: "string",
+			default: "",
 		},
 		prefix: {
 			type: "string",
@@ -42,13 +46,14 @@ npk-extractor <command> [options]
 
 Commands:
   npk       从 NPK 文件解压 sprite/audio
-  tres      扫描 .ani 文件，为共享 npk 生成 .tres
+  tres      从 PVF 读取二进制 .ani，结合 NPK 生成 .tres
   pvf       解密并提取 PVF 文件中的内容
 
 Options:
   --help        显示帮助
   --link        启用 LINK 帧映射模式（仅 npk）
-  --ani-dir     扫描 .ani 文件的目录（仅 tres，默认: cwd）
+  --pvf         PVF 文件路径（仅 tres，必选）
+  --npk-dir     NPK 文件目录（仅 tres，用于 LINK 解析，默认: cwd）
   --prefix      .tres 内资源路径的前缀（仅 tres，默认: sprite/）
   --output      输出目录（仅 pvf，默认: pvf）
 
@@ -56,8 +61,8 @@ Examples:
   npk-extractor npk                        # 解压 cwd 中所有 npk
   npk-extractor npk some.npk               # 解压单个 npk
   npk-extractor npk --link                # 带 link 模式解压
-  npk-extractor tres                       # 扫描 cwd 生成 .tres
-  npk-extractor tres --ani-dir ./animations
+  npk-extractor tres --pvf character.pvf   # 从 PVF 生成 .tres
+  npk-extractor tres --pvf f.pvf --npk-dir ./npk/ --prefix sprite/
   npk-extractor pvf file.pvf               # 提取 PVF 所有文件到 pvf/
   npk-extractor pvf file.pvf --output ./out
   `.trim(),
@@ -76,8 +81,15 @@ switch (command) {
 		break;
 	}
 	case "tres": {
-		generateTresFiles({
-			aniDir: values["ani-dir"],
+		const pvfPath = values.pvf;
+		if (!pvfPath) {
+			console.error("Error: 请指定 PVF 文件路径 (--pvf)");
+			showHelp();
+			process.exit(1);
+		}
+		await generateTresFiles({
+			pvfPath,
+			npkDir: values["npk-dir"],
 			prefix: values.prefix,
 		});
 		break;

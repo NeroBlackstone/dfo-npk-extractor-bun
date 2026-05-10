@@ -1,5 +1,5 @@
 import { BufferReader } from "./buffer-reader";
-import { decodeBig5 } from "./encoding";
+import { decodeAuto } from "./encoding";
 
 /**
  * 解析 stringtable.bin，构建字符串数组
@@ -31,7 +31,7 @@ export function parseStringTable(data: Buffer): string[] {
 
 		const strStart = startPos + 4;
 		const strBytes = data.subarray(strStart, strStart + len);
-		const str = decodeBig5(strBytes).toLowerCase().trim();
+		const str = decodeAuto(strBytes).toLowerCase().trim();
 		map[i] = str;
 	}
 
@@ -84,7 +84,7 @@ export async function parseNStringLst(
 		if (!strFileName) continue;
 		const fileData = await resolveFile(strFileName);
 		if (!fileData || fileData.length === 0) continue;
-		const content = decodeBig5(fileData);
+		const content = decodeAuto(fileData);
 		const kvMap = parseStrContent(content);
 		for (const [k, v] of kvMap) {
 			result.set(k, v);

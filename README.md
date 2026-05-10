@@ -1,10 +1,6 @@
 # dfo-npk-extractor-bun
 
-NPK 跨平台资源包解析器。将 .npk 文件转换为 PNG 图片和 OGG 音频。
-
-支持PVF解压。
-
-支持NPK转GoDot素材
+NPK/PVF 跨平台资源包解析器。将 .npk 文件转换为 PNG 图片和 OGG 音频，从 PVF 生成 Godot .tres SpriteFrames。
 
 ## Disclaimer
 
@@ -52,11 +48,11 @@ npk-extractor npk sprite_character_swordman_equipment_avatar_skin.NPK
 # 配合 --link 模式
 npk-extractor npk --link sprite_character_swordman_equipment_avatar_skin.NPK
 
-# 生成 Godot .tres 文件（扫描当前目录的pvf .ani和npk）
-npk-extractor tres
+# 从 PVF 生成 Godot .tres 文件（结合 NPK 中的 sprite）
+npk-extractor tres --pvf Script.pvf
 
-# 指定 .ani 目录生成 .tres
-npk-extractor tres --ani-dir ./animations --prefix sprite/
+# 指定 NPK 目录和资源前缀
+npk-extractor tres --pvf Script.pvf --npk-dir ./npk/ --prefix sprite/
 
 # 解密并提取 PVF 文件（默认输出到 pvf/ 目录）
 npk-extractor pvf Script.pvf
@@ -88,7 +84,8 @@ npk-extractor pvf Script.pvf --output ./out
 
 | 参数 | 说明 |
 |------|------|
-| `--ani-dir` | .ani 文件所在目录（默认 cwd） |
+| `--pvf` | PVF 文件路径（必填
+| `--npk-dir` | NPK 文件目录，用于 LINK 帧解析（默认 cwd） |
 | `--prefix` | .tres 内资源路径的前缀（默认 `sprite/`） |
 
 ## LINK 帧处理
@@ -178,6 +175,35 @@ npk-extractor npk --link
 | NpkFile | 来源NPK文件名 | character.NPK |
 | ImgName | 来源IMG路径 | sprite/monster/boss.img |
 
+## LST 转 JSON
+
+PVF 中的 `.lst` 文件是 ScriptFile 格式的查找表（ID → 名称映射），导出时自动转换为 `.lst.json`。
+
+### 转换规则
+
+| 源文件 | 输出文件 | 内容 |
+|--------|----------|------|
+| `itemname.lst` | `itemname.lst.json` | 物品 ID → 物品名称 |
+| `monstername.lst` | `monstername.lst.json` | 怪物 ID → 怪物名称 |
+| `skillname*.lst` | `skillname*.lst.json` | 技能 ID → 技能名称 |
+| `npcname.lst` | `npcname.lst.json` | NPC ID → NPC 名称 |
+| `character.lst` | `character.lst.json` | 索引 → 角色文件路径 |
+| `n_string.lst` | 不导出 | 字符串翻译索引（内部使用） |
+
+### JSON 格式
+
+```json
+{
+  "0": "swordman/swordman.chr",
+  "1": "fighter/fighter.chr",
+  "2": "gunner/gunner.chr"
+}
+```
+
+- Key：ScriptFile 中的 Int token 值（ID）
+- Value：String token 通过 `stringtable.bin` 解析后的文本
+
+
 ## 测试
 
 ```
@@ -189,8 +215,7 @@ bun test
 ```
 src/
 ├── ani/
-│   ├── AniFile.ts    # ANI 动画文件解析
-│   ├── tres.ts       # Godot .tres 格式生成器
+│   ├── tres.ts       # Godot .tres 格式生成器（从 PVF 二进制 .ani 生成）
 │   └── index.ts      # 导出入口
 ├── img/
 │   ├── decoder.ts    # Sprite 数据解码 (Zlib/DDS)

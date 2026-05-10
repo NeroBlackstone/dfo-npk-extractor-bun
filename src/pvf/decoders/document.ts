@@ -1,6 +1,14 @@
 import { BufferReader } from "../buffer-reader";
 import type { PvfStringContext } from "../types";
 
+/**
+ * 判断文件是否为 PVF Document
+ * Document 的前 2 字节固定为 0x0002（小端读取为 2）
+ */
+export function isDocumentFile(data: Buffer): boolean {
+	return data.length >= 2 && data.readUInt16LE(0) === 2;
+}
+
 /** ValueType enum (C++ ValueType.h) */
 enum ValueType {
 	Int = 2,

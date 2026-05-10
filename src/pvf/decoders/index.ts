@@ -2,7 +2,7 @@ import { decodeBig5, decodeEucKr } from "../encoding";
 import type { PvfStringContext } from "../types";
 import { parseBinaryAni } from "./ani-binary";
 import { serializeAniToText } from "./ani-text";
-import { parseDocument } from "./document";
+import { isDocumentFile, parseDocument } from "./document";
 import { serializeDocumentToText } from "./document-text";
 import { decompileScriptFile, isScriptFile } from "./script-file";
 
@@ -18,7 +18,37 @@ export interface PvfDecoder {
 	) => ConvertResult;
 }
 
+/**
+ * 解码器路由表
+ * 按优先级排列：magic number 检测优先于扩展名匹配
+ *
+ * 1. ScriptFile   — magic 0xD0B0
+ * 2. Document     — magic 0x0002
+ * 3. 纯文本 content — 首字节 0x23 (#)
+ * 4. ANI          — .ani 扩展名（无 magic）
+ * 5. 文本 .str    — Big5
+ * 6. 文本 .txt    — Big5
+ * 7. 文本 .nut    — EUC-KR
+ */
 export const decoders: PvfDecoder[] = [
+	{
+		name: "script",
+		match: (_filePath, data) => isScriptFile(data),
+		convert: (data, _filePath, ctx) => decompileScriptFile(data, ctx),
+	},
+	{
+		name: "document",
+		match: (_filePath, data) => isDocumentFile(data),
+		convert: (data, _filePath, ctx) => {
+			const docTree = parseDocument(data, ctx);
+			return serializeDocumentToText(docTree);
+		},
+	},
+	{
+		name: "text-content",
+		match: (_filePath, data) => data.length > 0 && data[0] === 0x23,
+		convert: (data) => data.toString("utf-8"),
+	},
 	{
 		name: "ani",
 		match: (filePath) => filePath.endsWith(".ani"),
@@ -33,21 +63,13 @@ export const decoders: PvfDecoder[] = [
 		convert: (data) => decodeBig5(data),
 	},
 	{
+		name: "txt",
+		match: (filePath) => filePath.endsWith(".txt"),
+		convert: (data) => decodeBig5(data),
+	},
+	{
 		name: "nut",
 		match: (filePath) => filePath.endsWith(".nut"),
 		convert: (data) => decodeEucKr(data),
-	},
-	{
-		name: "script",
-		match: (_filePath, data) => data.length > 7 && isScriptFile(data),
-		convert: (data, _filePath, ctx) => decompileScriptFile(data, ctx),
-	},
-	{
-		name: "document",
-		match: (_filePath, data) => data.length > 7,
-		convert: (data, _filePath, ctx) => {
-			const docTree = parseDocument(data, ctx);
-			return serializeDocumentToText(docTree);
-		},
 	},
 ];

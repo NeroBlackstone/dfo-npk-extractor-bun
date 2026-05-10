@@ -143,7 +143,7 @@ export function parseBinaryAni(buffer: Buffer): AniData {
 	const resources: string[] = [];
 	for (let i = 0; i < countOfResources; i++) {
 		const len = reader.readInt32();
-		let str = reader.readAsciiString(len);
+		let str = reader.readAsciiString(len).replace(/\0/g, "");
 		str = str.toLowerCase();
 		resources.push(str);
 	}

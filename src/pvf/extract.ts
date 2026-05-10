@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import { ensureDir } from "../utils/file";
 import { buildStringContext } from "./build-string-context";
 import { convertFile } from "./convert-file";
+import { convertNameList } from "./name-list";
 import { readPvf } from "./reader";
 import type { PvfFileEntry } from "./types";
 
@@ -37,6 +38,27 @@ export async function extractPvf(options: PvfExtractOptions): Promise<{
 
 	let extractedCount = 0;
 	for (const entry of entries) {
+		const lowerPath = entry.filePath.toLowerCase();
+
+		// 跳过 stringtable.bin
+		if (lowerPath === "stringtable.bin") continue;
+
+		// 跳过所有 .lst 文件（name-list 输出 JSON，其余不导出）
+		if (lowerPath.endsWith(".lst")) {
+			const data = await getFileData(entry);
+			if (data.length === 0) continue;
+			const json = convertNameList(data, strCtx);
+			if (!json) continue;
+			const safePath = entry.filePath
+				.replace(/\\/g, "/")
+				.replace(/^\//, "");
+			const outPath = `${outputDir}/${safePath}.json`;
+			ensureDir(dirname(outPath));
+			writeFileSync(outPath, json);
+			extractedCount++;
+			continue;
+		}
+
 		const data = await getFileData(entry);
 		if (data.length === 0) continue;
 

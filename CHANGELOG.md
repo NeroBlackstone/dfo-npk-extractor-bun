@@ -6,6 +6,11 @@
 - 新增 `pvf` 子命令，支持解密并提取 PVF 文件（默认输出到 `pvf/` 目录）
 - 新增 `src/pvf/` 模块，实现 PVF 目录树解密和文件内容解密
 - `tres` 子命令的 `--output` 参数改为 `--prefix`，用于控制 .tres 内资源路径的前缀（默认 `sprite/`）
+- **Breaking**: `tres` 子命令移除文本 .ani 支持，改为直接从 PVF 二进制 .ani 生成 .tres
+- `tres` 子命令新增 `--pvf` 必选参数，指定 PVF 文件路径
+- `tres` 子命令 `--ani-dir` 更名为 `--npk-dir`，用于指定 NPK 目录（LINK 解析）
+- 修复 PVF 二进制 ANI 资源路径中 null 字符未清除的问题
+- 修复 `buildLinkMap` 中 NPK album 路径大小写不匹配问题
 
 
 ## v0.4.0

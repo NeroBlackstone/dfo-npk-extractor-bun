@@ -2,10 +2,18 @@ import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { cwd } from "node:process";
 import { readNpkFile } from "../npk/index";
-import { AniFile } from "./AniFile";
+import { type AniData, parseBinaryAni } from "../pvf/decoders/ani-binary";
+import { readPvf } from "../pvf/reader";
+
+export interface PvfAniEntry {
+	name: string;
+	aniPath: string;
+	data: AniData;
+}
 
 export interface TresOptions {
-	aniDir: string;
+	pvfPath: string;
+	npkDir: string;
 	prefix: string;
 }
 
@@ -27,20 +35,6 @@ function generateExtId(counter: number): string {
 	return `${counter}_${suffix}`;
 }
 
-function findAniFiles(dir: string): string[] {
-	const results: string[] = [];
-	const entries = readdirSync(dir, { withFileTypes: true });
-	for (const entry of entries) {
-		const fullPath = join(dir, entry.name);
-		if (entry.isDirectory()) {
-			results.push(...findAniFiles(fullPath));
-		} else if (entry.name.toLowerCase().endsWith(".ani")) {
-			results.push(fullPath);
-		}
-	}
-	return results;
-}
-
 /**
  * 从 imagePath 推断 IMG 名称
  * "character/swordman/equipment/avatar/skin/sm_body%04d.img" -> "sm_body0000.img"
@@ -50,36 +44,7 @@ function inferImgName(imagePath: string): string {
 	return lastPart.replace("%04d", "0000");
 }
 
-/**
- * 扫描 aniDir 下的所有 .ani 文件，按 IMG 分组
- */
-export function groupAnisByImg(
-	aniDir: string,
-): Map<string, { aniFile: AniFile; aniPath: string }[]> {
-	const aniFiles = findAniFiles(aniDir);
-	const imgGroups = new Map<string, { aniFile: AniFile; aniPath: string }[]>();
-
-	for (const aniPath of aniFiles) {
-		const aniFile = AniFile.fromPath(aniPath);
-
-		if (aniFile.frames.length === 0) continue;
-		const firstFrame = aniFile.frames[0];
-		if (!firstFrame) continue;
-		const firstImagePath = firstFrame.imagePath;
-		const imgName = inferImgName(firstImagePath);
-
-		if (!imgName) continue;
-		if (!imgGroups.has(imgName)) {
-			imgGroups.set(imgName, []);
-		}
-		imgGroups.get(imgName)?.push({ aniFile, aniPath });
-	}
-
-	return imgGroups;
-}
-
 function mapAniPathToSpritePath(aniPath: string, frameIndex: number): string {
-	// 占位符 %04d 保持原样，写成 0000
 	const pathWithIndex = aniPath.replace("%04d", "0000");
 	const lowerPath = pathWithIndex.toLowerCase();
 	return join(lowerPath.replace(/\.img$/, ".img"), `${frameIndex}.png`);
@@ -90,7 +55,7 @@ function escapeTresString(str: string): string {
 }
 
 /**
- * 扫描 NPK 文件夹，只收集 aniNeededImgs 中需要的 IMG 的 links
+ * 扫描 NPK 文件夹，收集 aniNeededImgs 中需要的 IMG 的 links
  */
 export function buildLinkMap(
 	npkDir: string,
@@ -104,7 +69,7 @@ export function buildLinkMap(
 		const albums = readNpkFile(npkPath);
 		for (const album of albums) {
 			if (album.isAudio()) continue;
-			const imgName = basename(album.path);
+			const imgName = basename(album.path).toLowerCase();
 			if (!aniNeededImgs.has(imgName)) continue;
 			const links = album.getLinks();
 			linkMap.set(imgName, links ?? {});
@@ -128,10 +93,51 @@ function resolveFrameIndex(
 }
 
 /**
- * 生成单个 .tres 文件的内容
+ * 从 PVF 读取二进制 .ani 文件，按 IMG 分组
  */
-export function generateTresContent(
-	anis: { aniFile: AniFile; aniPath: string }[],
+export async function groupPvfAnisByImg(
+	pvfPath: string,
+): Promise<Map<string, PvfAniEntry[]>> {
+	const { entries, getFileData } = await readPvf(pvfPath);
+	const imgGroups = new Map<string, PvfAniEntry[]>();
+
+	for (const entry of entries) {
+		const lowerPath = entry.filePath.toLowerCase();
+		if (!lowerPath.endsWith(".ani")) continue;
+
+		const data = await getFileData(entry);
+		if (data.length === 0) continue;
+
+		try {
+			const aniData = parseBinaryAni(data);
+			const name = basename(entry.filePath).replace(/\.ani$/, "");
+
+			if (aniData.frames.length === 0) continue;
+			const firstFrame = aniData.frames[0];
+			if (!firstFrame) continue;
+
+			const imgName = inferImgName(firstFrame.path);
+			if (!imgName) continue;
+
+			let group = imgGroups.get(imgName);
+			if (!group) {
+				group = [];
+				imgGroups.set(imgName, group);
+			}
+			group.push({ name, aniPath: entry.filePath, data: aniData });
+		} catch {
+			// Skip binary ANI files that fail to parse
+		}
+	}
+
+	return imgGroups;
+}
+
+/**
+ * 从 AniData 直接生成 .tres 文件内容
+ */
+export function generateTresFromPvf(
+	anis: PvfAniEntry[],
 	linkMap: Map<string, Record<string, number>>,
 	prefix: string,
 ): string {
@@ -144,17 +150,13 @@ export function generateTresContent(
 	const extIdMap = new Map<string, string>();
 	let extCounter = 1;
 
-	// 先收集所有帧的 spritePath，用于生成 ext_resource
+	// 收集所有帧的 spritePath
 	const spritePaths: string[] = [];
-	for (const { aniFile } of anis) {
-		for (const frame of aniFile.frames) {
-			const imgName = inferImgName(frame.imagePath);
-			const resolvedIndex = resolveFrameIndex(
-				imgName,
-				frame.imageIndex,
-				linkMap,
-			);
-			const spritePath = mapAniPathToSpritePath(frame.imagePath, resolvedIndex);
+	for (const { data } of anis) {
+		for (const frame of data.frames) {
+			const imgName = inferImgName(frame.path);
+			const resolvedIndex = resolveFrameIndex(imgName, frame.imgParam, linkMap);
+			const spritePath = mapAniPathToSpritePath(frame.path, resolvedIndex);
 			spritePaths.push(spritePath);
 		}
 	}
@@ -177,26 +179,19 @@ export function generateTresContent(
 
 	// 生成每个动画
 	const animEntries: string[] = [];
-	for (const { aniFile } of anis) {
-		const framesStr = aniFile.frames
+	for (const { data, name } of anis) {
+		const framesStr = data.frames
 			.map((frame) => {
-				const imgName = inferImgName(frame.imagePath);
-				const resolvedIndex = resolveFrameIndex(
-					imgName,
-					frame.imageIndex,
-					linkMap,
-				);
-				const spritePath = mapAniPathToSpritePath(
-					frame.imagePath,
-					resolvedIndex,
-				);
+				const imgName = inferImgName(frame.path);
+				const resolvedIndex = resolveFrameIndex(imgName, frame.imgParam, linkMap);
+				const spritePath = mapAniPathToSpritePath(frame.path, resolvedIndex);
 				const extId = extIdMap.get(spritePath) ?? "1_unknown";
 				return `{\n"duration": ${frame.delay / 100},\n"texture": ExtResource("${extId}")\n}`;
 			})
 			.join(", ");
 
 		animEntries.push(
-			`{\n"frames": [${framesStr}],\n"loop": false,\n"name": &"${aniFile.name}",\n"speed": 5.0\n}`,
+			`{\n"frames": [${framesStr}],\n"loop": ${data.loop},\n"name": &"${name}",\n"speed": 5.0\n}`,
 		);
 	}
 
@@ -207,25 +202,25 @@ export function generateTresContent(
 	return lines.join("\n");
 }
 
-export function generateTresFiles(options: TresOptions): void {
-	const { aniDir, prefix } = options;
+export async function generateTresFiles(options: TresOptions): Promise<void> {
+	const { pvfPath, npkDir, prefix } = options;
 
-	const imgGroups = groupAnisByImg(aniDir);
+	const imgGroups = await groupPvfAnisByImg(pvfPath);
 
 	if (imgGroups.size === 0) {
-		console.log("No .ani files found");
+		console.log("No .ani files found in PVF");
 		return;
 	}
 
-	// 扫描 aniDir 下的 NPK 文件构建 LINK 映射
-	const linkMap = buildLinkMap(aniDir, new Set(imgGroups.keys()));
+	// NPK link resolution
+	const linkMap = buildLinkMap(npkDir, new Set(imgGroups.keys()));
 
-	console.log(`Found ${imgGroups.size} IMG group(s) from .ani files\n`);
+	console.log(`Found ${imgGroups.size} IMG group(s) from PVF .ani files\n`);
 
 	for (const [imgName, anis] of imgGroups) {
 		if (!linkMap.has(imgName)) {
 			console.error(
-				`[WARN] IMG "${imgName}" not found in any NPK under ${aniDir}, .tres may reference non-existent PNG files`,
+				`[WARN] IMG "${imgName}" not found in any NPK under ${npkDir}, .tres may reference non-existent PNG files`,
 			);
 			continue;
 		}
@@ -234,7 +229,7 @@ export function generateTresFiles(options: TresOptions): void {
 		console.log(`[${imgName}] ${aniNames.join(", ")}`);
 		const tresPath = join(cwd(), "tres", imgName.replace(".img", ".tres"));
 
-		const tresContent = generateTresContent(anis, linkMap, prefix);
+		const tresContent = generateTresFromPvf(anis, linkMap, prefix);
 
 		mkdirSync(join(cwd(), "tres"), { recursive: true });
 		writeFileSync(tresPath, tresContent, "utf-8");
