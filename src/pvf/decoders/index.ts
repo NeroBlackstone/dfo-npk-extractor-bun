@@ -2,7 +2,9 @@ import { decodeBig5, decodeEucKr } from "../encoding";
 import type { PvfStringContext } from "../types";
 import { parseBinaryAni } from "./ani-binary";
 import { serializeAniToText } from "./ani-text";
-import { decompileScriptFile, isScriptFile } from "./script-file";
+import { isScriptFile } from "./script-file";
+import { parseScriptFileToJson } from "./script-file-json";
+import { convertStrToJson } from "./str-json";
 
 export type ConvertResult = string | Buffer;
 
@@ -31,7 +33,8 @@ export const decoders: PvfDecoder[] = [
 	{
 		name: "script",
 		match: (_filePath, data) => isScriptFile(data),
-		convert: (data, _filePath, ctx) => decompileScriptFile(data, ctx),
+		convert: (data, _filePath, ctx) =>
+			JSON.stringify(parseScriptFileToJson(data, ctx), null, 2),
 	},
 	{
 		name: "text-content",
@@ -49,7 +52,7 @@ export const decoders: PvfDecoder[] = [
 	{
 		name: "str",
 		match: (filePath) => filePath.endsWith(".str"),
-		convert: (data) => decodeBig5(data),
+		convert: (data) => convertStrToJson(data),
 	},
 	{
 		name: "txt",

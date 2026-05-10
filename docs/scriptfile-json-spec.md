@@ -2,41 +2,93 @@
 
 PVF ScriptFile 二进制 token 流到 JSON 树的序列化规范。
 
+## 核心概念
+
+- **section 块 `{}`**：一个独立 section 的完整内容，包含其所有子节点
+- **container section 始终为数组 `[{...}]`**：每个元素是一个独立 section 块，即使只有一个
+- **叶子值**：leaf section 直接输出值，不包 section 块
+
 ## 顶层结构
 
 输出文件命名为 `{原文件名}.{原扩展名}.json`，例如 `snowman.mob` → `snowman.mob.json`。
 
-顶层为 `{}` 对象，直接包含各子 section，不保留根 section 包装：
+顶层为 `[]` 数组，每个元素是一个顶层 section 块：
 
 ```jsonc
-{
-  "level": 10,
-  "width": [1, 1],
-  // ...其他子 section
-}
+[
+  {
+    "mob": {
+      "name": "史莱姆",
+      "level": [{ "value": 10 }]
+    }
+  }
+]
 ```
 
 ## 节点类型
 
-### Section
+### Section（container）
 
-所有 section 统一为 `"name": value` 形式，通过值的类型区分 leaf 和 container：
+container section 输出为 `"name": [{}]` 形式，始终为数组，每个元素是一个 section 块：
 
 ```jsonc
 {
-  "level": 10                          // leaf：单值
-  "width": [1, 1]                     // leaf：多值
-  "name": "史莱姆"                     // leaf：单个 String
-  "command": ["(UP)", "(RIGHT)"]      // leaf：多个 String
-  "dungeon": {                         // container：{} 包裹子 section
-    "static_data": [130, 150, 500]
-  }
+  "dungeon": [
+    { "static_data": [130, 150, 500] }
+  ]
 }
 ```
 
-**判断规则**：预扫描所有 type 5 token，如果字符串表中存在 `[/name]` 形式的 token → container（值为 `{}`）；否则 → leaf（值为基础类型或 `[]`）。
+即使只有一个 section 块，也保持数组形式：
 
-**单值简化**：leaf section 只含一个 token 时，直接输出值，不包类型标记。
+```jsonc
+{
+  "input": [
+    { "state_check": { "d": 700, "time": 700 } }
+  ]
+}
+```
+
+**判断规则**：预扫描所有 type 5 token，如果字符串表中存在 `[/name]` 形式的 token → container。
+
+### Section（leaf）
+
+leaf section 输出为 `"name": value` 形式，value 为基础类型或数组：
+
+```jsonc
+{
+  "level": 10,                        // 单值
+  "width": [1, 1],                    // 多值
+  "name": "史莱姆",                    // 单个 String
+  "command": ["(UP)", "(RIGHT)"]      // 多个 String
+}
+```
+
+**单值简化**：leaf section 只含一个 token 时，直接输出值，不包数组。
+
+### Section（empty）
+
+section 内无任何子 token 时，输出 `null`。常见于 `.key` 等配置文件中的空占位：
+
+```jsonc
+{
+  "input": null,
+  "state_check": [{ "target_current_direction": 50, "time": 100 }]
+}
+```
+
+### 重复 section
+
+同级出现多个同名 container section 时，每个 section 块作为数组的一个元素：
+
+```jsonc
+"input": [
+  { "state_check": { "target_current_direction": 50, "time": 100 } },
+  { "state_check": { "d": 700, "time": 700 } }
+]
+```
+
+与单个 container 形式一致，无需特殊处理。
 
 **Command（type 6）**：直接输出字符串，不加包装。**CommandSeparator（type 8）**：丢弃，无语义。
 
@@ -58,33 +110,6 @@ PVF ScriptFile 二进制 token 流到 JSON 树的序列化规范。
 格式：`"@{listId}::{name}"`，`@` 前缀为唯一标识，无歧义。
 
 查找路径：`listId` → `n_string.lst[listId]` → `.str` 文件名 → 该文件中 `key=name` 的条目 → 解析文本。
-
-完整示例（`snowman.mob`）：
-
-```jsonc
-{
-  "width": [40, 10],
-
-  "common_champion_elemental_property": [
-    "@0::water_element",
-    "@0::dark_element"
-  ],
-
-  "ability_category": [
-    "@1::hp_max", "*", 140,
-    "@1::phys_atk", "*", 100
-  ],
-
-  "category": [
-    "@2::undead",
-    "@2::melee_combat",
-    "@2::close_carefully"
-  ],
-
-  "level": [18, 33],
-  "dark_resistance": [30, 30]
-}
-```
 
 ## 解析算法
 
@@ -129,8 +154,11 @@ function parseBody(tokens, start, end):
                 sectionEnd = findNextSection(tokens, i+1, end)
 
             children = parseBody(tokens, i+1, sectionEnd)
-            if isContainer:
-                // container: 转为 object，子 section 名作为 key
+            if children.length == 0:
+                // 空 section: 无子 token，输出 null
+                nodes.push({ [name]: null })
+            elif isContainer:
+                // container: 合并子节点为 object
                 obj = {}
                 for child in children:
                     for key, value in child:
@@ -152,7 +180,26 @@ function parseBody(tokens, start, end):
     return nodes
 ```
 
-### 第四步：StringLink 合并
+### 第四步：container 包装
+
+将每个 container section 包装为数组：
+
+```
+function wrapContainers(nodes):
+    result = []
+    for node in nodes:
+        name = Object.keys(node)[0]
+        value = node[name]
+        if value is object and not Array.isArray(value):
+            result.push({ [name]: [value] })
+        else:
+            result.push(node)
+    return result
+```
+
+顶层 `parseBody` 的返回值直接调用 `wrapContainers`，即为最终 JSON 数组。
+
+### 第五步：StringLink 合并
 
 type 9 (StringLinkIndex) 必须与下一个 type 10 (StringLink) 合并为一个字符串。type 9 的 data 作为 listId，type 10 的 data 经 stringtable 解析后作为 name。输出格式为 `"@{listId}::{name}"`。不做 `.str` 文件的实际查找，仅保留索引信息。
 
@@ -162,30 +209,42 @@ type 9 (StringLinkIndex) 必须与下一个 type 10 (StringLink) 合并为一个
 
 ```jsonc
 // [level] → 10
-"level": 10
+[
+  { "level": 10 }
+]
 
 // [width] → 1 1
-"width": [1, 1]
+[
+  { "width": [1, 1] }
+]
 ```
 
 ### 示例 2：嵌套 section
 
 ```jsonc
 // [dungeon] → [/dungeon]，内部有 [static data]
-"dungeon": {
-  "static_data": [130, 150, 500]
-}
+[
+  {
+    "dungeon": [
+      { "static_data": [130, 150, 500] }
+    ]
+  }
+]
 ```
 
 ### 示例 3：混合内容
 
 ```jsonc
 // [mob] 内含值 + 嵌套 section + leaf section
-"mob": {
-  "name": "史莱姆",
-  "level": [10, 20, 30],
-  "ability_category": [1, 2]
-}
+[
+  {
+    "mob": {
+      "name": "史莱姆",
+      "level": [{ "value": 10 }, { "value": 20 }, { "value": 30 }],
+      "ability_category": [1, 2]
+    }
+  }
+]
 ```
 
 ### 示例 4：StringLink
@@ -199,7 +258,36 @@ type 9 (StringLinkIndex) 必须与下一个 type 10 (StringLink) 合并为一个
 
 ```jsonc
 // [command] → [/command]，内部全是 cmd 和 sep
-"command": ["(UP)", "(RIGHT)", "(SKILL)"]
+[
+  {
+    "command": ["(UP)", "(RIGHT)", "(SKILL)"]
+  }
+]
+```
+
+### 示例 6：重复 section
+
+```jsonc
+// 两个 [input]，各自内部有 [state_check]
+[
+  {
+    "input": [
+      { "state_check": { "target_current_direction": 50, "time": 100 } },
+      { "state_check": { "d": 700, "time": 700 } }
+    ]
+  }
+]
+```
+
+### 示例 7：空 section
+
+```jsonc
+// [input] 内无任何子 token
+[
+  {
+    "input": null
+  }
+]
 ```
 
 ## 类型映射速查
@@ -210,7 +298,8 @@ type 9 (StringLinkIndex) 必须与下一个 type 10 (StringLink) 合并为一个
 | 3 | IntEx | `number` |
 | 4 | Float | `number` |
 | 5 | Section (leaf) | `"name": value` 或 `"name": [v1, v2, ...]` |
-| 5 | Section (container) | `"name": { 子 section, ... }` |
+| 5 | Section (container) | `"name": [{...}]`（始终为数组） |
+| 5 | Section (empty) | `"name": null` |
 | 6 | Command | `string`（直接输出） |
 | 7 | String | `string`（直接输出） |
 | 8 | CommandSeparator | 丢弃 |
@@ -284,5 +373,5 @@ type 9 (StringLinkIndex) 必须与下一个 type 10 (StringLink) 合并为一个
 2. **container 的闭标签 token 不出现在 JSON 中**，仅用于界定对象范围
 3. **Int 和 Float 在 JSON 中都是 number**，如需区分可在解析时保留原始 type 信息（扩展方案：`{ "int": 42 }` / `{ "float": 3.14 }`）
 4. **section 名称去除 `[]` 包裹，空格替换为下划线**，例如 `[/action info]` → `action_info`
-5. **重复 section 自然映为 object 中的同名 key 数组**，无需特殊处理
+5. **container section 始终为数组**，每个元素是一个独立 section 块，无论是否重复
 6. **leaf section 不含嵌套子 section**，否则应视为 container

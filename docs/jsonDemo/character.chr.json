@@ -1,33 +1,41 @@
-{
-  "name": "@0::swordman",
-  "level": 1,
-  "job": "@1::swordman",
+[
+  {
+    "name": "@0::swordman",
+    "level": 1,
+    "job": "@1::swordman",
 
-  "status": {
-    "physical_strength": 20,
-    "physical_attack": 15,
-    "magical_attack": 5,
-    "physical_defense": 10,
-    "magical_defense": 5,
-    "attack_speed": 100,
-    "move_speed": 100
-  },
+    "status": [
+      {
+        "physical_strength": 20,
+        "physical_attack": 15,
+        "magical_attack": 5,
+        "physical_defense": 10,
+        "magical_defense": 5,
+        "attack_speed": 100,
+        "move_speed": 100
+      }
+    ],
 
-  "growth": {
-    "physical_strength": [3, 4, 5],
-    "physical_attack": [2, 3, 4],
-    "hp_max": [100, 120, 140]
-  },
+    "growth": [
+      {
+        "physical_strength": [3, 4, 5],
+        "physical_attack": [2, 3, 4],
+        "hp_max": [100, 120, 140]
+      }
+    ],
 
-  "equipable": {
-    "weapon": ["@2::sword", "@2::katana"],
-    "armor": ["@3::light_armor", "@3::medium_armor"],
-    "accessory": ["@4::ring", "@4::necklace"]
-  },
+    "equipable": [
+      {
+        "weapon": ["@2::sword", "@2::katana"],
+        "armor": ["@3::light_armor", "@3::medium_armor"],
+        "accessory": ["@4::ring", "@4::necklace"]
+      }
+    ],
 
-  "skill_list": [
-    "@5::slash",
-    "@5::uppercut",
-    "@5::slide"
-  ]
-}
+    "skill_list": [
+      "@5::slash",
+      "@5::uppercut",
+      "@5::slide"
+    ]
+  }
+]

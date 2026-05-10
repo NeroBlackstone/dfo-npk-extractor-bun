@@ -1,32 +1,42 @@
-{
-  "name": "@0::quest_slime_hunt",
-  "level": 5,
-  "type": "@1::main_quest",
+[
+  {
+    "name": "@0::quest_slime_hunt",
+    "level": 5,
+    "type": "@1::main_quest",
 
-  "condition": {
-    "level_min": 5,
-    "level_max": 15,
-    "prerequisite": ["@2::quest_intro"]
-  },
+    "condition": [
+      {
+        "level_min": 5,
+        "level_max": 15,
+        "prerequisite": ["@2::quest_intro"]
+      }
+    ],
 
-  "objective": {
-    "type": "@3::kill",
-    "target": "@4::slime",
-    "count": 10
-  },
+    "objective": [
+      {
+        "type": "@3::kill",
+        "target": "@4::slime",
+        "count": 10
+      }
+    ],
 
-  "reward": {
-    "exp": 500,
-    "gold": 1000,
-    "item": [
-      {"id": "@5::hp_potion", "count": 5},
-      {"id": "@6::iron_sword", "count": 1}
+    "reward": [
+      {
+        "exp": 500,
+        "gold": 1000,
+        "item": [
+          {"id": "@5::hp_potion", "count": 5},
+          {"id": "@6::iron_sword", "count": 1}
+        ]
+      }
+    ],
+
+    "dialogue": [
+      {
+        "start": "@7::dlg_quest_start",
+        "progress": "@8::dlg_quest_progress",
+        "complete": "@9::dlg_quest_complete"
+      }
     ]
-  },
-
-  "dialogue": {
-    "start": "@7::dlg_quest_start",
-    "progress": "@8::dlg_quest_progress",
-    "complete": "@9::dlg_quest_complete"
   }
-}
+]

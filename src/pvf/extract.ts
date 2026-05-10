@@ -5,6 +5,7 @@ import { buildStringContext } from "./build-string-context";
 import { convertFile } from "./convert-file";
 import { convertNameList } from "./name-list";
 import { readPvf } from "./reader";
+import { isScriptFile } from "./decoders/script-file";
 import type { PvfFileEntry } from "./types";
 
 export interface PvfExtractOptions {
@@ -63,7 +64,10 @@ export async function extractPvf(options: PvfExtractOptions): Promise<{
 		if (data.length === 0) continue;
 
 		const safePath = entry.filePath.replace(/\\/g, "/").replace(/^\//, "");
-		const outPath = `${outputDir}/${safePath}`;
+		const lowerPath2 = entry.filePath.toLowerCase();
+		const isJsonOutput =
+			isScriptFile(data) || lowerPath2.endsWith(".str");
+		const outPath = `${outputDir}/${safePath}${isJsonOutput ? ".json" : ""}`;
 		ensureDir(dirname(outPath));
 
 		const outputData = convertFile(data, entry.filePath, strCtx);

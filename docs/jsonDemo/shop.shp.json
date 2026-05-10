@@ -1,18 +1,22 @@
-{
-  "name": "@0::weapon_shop",
-  "type": "@1::normal_shop",
-  "level": 1,
+[
+  {
+    "name": "@0::weapon_shop",
+    "type": "@1::normal_shop",
+    "level": 1,
 
-  "npc": "@2::blacksmith",
+    "npc": "@2::blacksmith",
 
-  "sell_list": [
-    {"item": "@3::iron_sword", "price": 500, "stock": -1},
-    {"item": "@4::iron_armor", "price": 800, "stock": -1},
-    {"item": "@5::hp_potion", "price": 100, "stock": -1}
-  ],
+    "sell_list": [
+      {"item": "@3::iron_sword", "price": 500, "stock": -1},
+      {"item": "@4::iron_armor", "price": 800, "stock": -1},
+      {"item": "@5::hp_potion", "price": 100, "stock": -1}
+    ],
 
-  "buy_option": {
-    "buy_rate": 0.5,
-    "enable": true
+    "buy_option": [
+      {
+        "buy_rate": 0.5,
+        "enable": true
+      }
+    ]
   }
-}
+]

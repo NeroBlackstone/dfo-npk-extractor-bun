@@ -8,21 +8,23 @@ const FAKE_PVF_PATH = "test/fake.pvf";
 const emptyCtx: PvfStringContext = { binMap: [], stringMap: new Map() };
 
 describe("convertFile", () => {
-	test("should convert .ani binary to text", async () => {
-		const { entries, getFileData } = await readPvf(FAKE_PVF_PATH);
-		const data = await getFileData(entries[2]!);
-		const result = convertFile(data, "test/move.ani", emptyCtx);
-		expect(typeof result).toBe("string");
-		expect((result as string).startsWith("#PVF_File")).toBe(true);
-	});
-
-	test("should convert script file (0xD0B0 magic) to text", async () => {
+	test("should convert script file (0xD0B0 magic) to JSON", async () => {
 		const { entries, getFileData } = await readPvf(FAKE_PVF_PATH);
 		const data = await getFileData(entries[2]!);
 		expect(data.readUInt16LE(0)).toBe(0xd0b0);
 		const result = convertFile(data, "test/character.ai", emptyCtx);
 		expect(typeof result).toBe("string");
-		expect((result as string).startsWith("#PVF_File")).toBe(true);
+		const parsed = JSON.parse(result as string);
+		expect(typeof parsed).toBe("object");
+	});
+
+	test("should convert .ani binary to JSON when it has ScriptFile magic", async () => {
+		const { entries, getFileData } = await readPvf(FAKE_PVF_PATH);
+		const data = await getFileData(entries[2]!);
+		const result = convertFile(data, "test/move.ani", emptyCtx);
+		expect(typeof result).toBe("string");
+		const parsed = JSON.parse(result as string);
+		expect(typeof parsed).toBe("object");
 	});
 
 	test("should pass through short data unchanged", () => {
@@ -37,11 +39,13 @@ describe("convertFile", () => {
 		expect(result).toBe(data);
 	});
 
-	test("should convert .str with BIG5 encoding", () => {
-		const big5Buf = Buffer.from([0xb4, 0xfa, 0xb8, 0xd5]);
-		const result = convertFile(big5Buf, "test.str", emptyCtx);
+	test("should convert .str to JSON", () => {
+		// BIG5 encoded "key>value" text
+		const content = Buffer.from("key>value\n// comment\nfoo>bar", "utf-8");
+		const result = convertFile(content, "test.str", emptyCtx);
 		expect(typeof result).toBe("string");
-		expect(result).toBe("測試");
+		const parsed = JSON.parse(result as string);
+		expect(parsed).toEqual({ key: "value", foo: "bar" });
 	});
 
 	test("should convert text content starting with #", () => {
