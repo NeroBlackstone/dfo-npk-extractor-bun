@@ -70,6 +70,19 @@ export class BufferReader {
 		return str;
 	}
 
+	readNullTerminatedString(): string {
+		let len = 0;
+		while (
+			len < this.buffer.length - this.offset &&
+			this.buffer[this.offset + len] !== 0
+		) {
+			len++;
+		}
+		const str = this.buffer.toString("latin1", this.offset, this.offset + len);
+		this.offset += len;
+		return str.trim();
+	}
+
 	getOffset(): number {
 		return this.offset;
 	}

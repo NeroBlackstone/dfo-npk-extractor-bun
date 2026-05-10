@@ -89,7 +89,7 @@ switch (command) {
 			showHelp();
 			process.exit(1);
 		}
-		extractPvf({
+		await extractPvf({
 			pvfPath: pvfFile,
 			outputDir: values.output,
 		});

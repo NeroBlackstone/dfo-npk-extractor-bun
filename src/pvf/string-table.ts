@@ -74,3 +74,41 @@ export function decodeBig5(data: Buffer): string {
 export function decodeEucKr(data: Buffer): string {
 	return eucKrDecoder.decode(data);
 }
+
+const N_STRING_MAGIC = 53424;
+
+/**
+ * 解析 n_string.lst，通过 stringBinMap 索引查找 .str 文件并解析 key>value 翻译
+ * @param data n_string.lst 的原始数据
+ * @param stringBinMap stringtable.bin 解析后的字符串数组
+ * @param resolveFile 根据文件名获取文件数据的回调，找不到返回 null
+ */
+export async function parseNStringLst(
+	data: Buffer,
+	stringBinMap: string[],
+	resolveFile: (name: string) => Promise<Buffer | null>,
+): Promise<Map<string, string>> {
+	const result = new Map<string, string>();
+	if (data.length < 2) return result;
+
+	const reader = new BufferReader(data);
+	const magicNumber = reader.readUint16();
+	if (magicNumber !== N_STRING_MAGIC) return result;
+
+	while (reader.getRemaining() >= 10) {
+		for (let k = 0; k < 6; k++) reader.readUint8();
+		const index = reader.readInt32();
+		if (index < 0 || index >= stringBinMap.length) continue;
+		const strFileName = stringBinMap[index];
+		if (!strFileName) continue;
+		const fileData = await resolveFile(strFileName);
+		if (!fileData || fileData.length === 0) continue;
+		const content = decodeBig5(fileData);
+		const kvMap = parseStrContent(content);
+		for (const [k, v] of kvMap) {
+			result.set(k, v);
+		}
+	}
+
+	return result;
+}

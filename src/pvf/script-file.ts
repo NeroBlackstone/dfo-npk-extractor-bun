@@ -1,3 +1,5 @@
+import type { PvfStringContext } from "./types";
+
 function formatFloat(value: number): string {
 	const text = value.toString();
 	return text.includes(".") ? text : `${text}.0`;
@@ -31,8 +33,7 @@ export function isScriptFile(data: Buffer): boolean {
  */
 export function decompileScriptFile(
 	data: Buffer,
-	stringBinMap: string[],
-	stringStringMap: Map<string, string>,
+	ctx: PvfStringContext,
 ): string {
 	if (data.length < 7) {
 		return "#PVF_File\r\n";
@@ -47,7 +48,7 @@ export function decompileScriptFile(
 		switch (type) {
 			case 5: {
 				// Section
-				const name = stringBinMap[value] || "";
+				const name = ctx.binMap[value] || "";
 				result += `\r\n${name}\r\n`;
 				break;
 			}
@@ -55,15 +56,15 @@ export function decompileScriptFile(
 			case 10: {
 				// StringLink: 前一个 token 必须是 type 9（StringLinkIndex）
 				const _strListNumber = index >= 7 ? data.readInt32LE(index - 4) : 0;
-				const strName = stringBinMap[value] || "";
-				const resolved = stringStringMap.get(strName) || strName;
+				const strName = ctx.binMap[value] || "";
+				const resolved = ctx.stringMap.get(strName) || strName;
 				result += `\`${resolved.replace(/\\n/g, "\r\n")}\`\r\n`;
 				break;
 			}
 
 			case 7: {
 				// String
-				const str = stringBinMap[value] || "";
+				const str = ctx.binMap[value] || "";
 				result += `\`${str}\`\r\n`;
 				break;
 			}
@@ -71,7 +72,7 @@ export function decompileScriptFile(
 			case 6:
 			case 8: {
 				// Command / CommandSeparator
-				const str = stringBinMap[value] || "";
+				const str = ctx.binMap[value] || "";
 				result += `{${type}=\`${str}\`}\r\n`;
 				break;
 			}

@@ -1,3 +1,4 @@
+import { BufferReader } from "./buffer-reader";
 import type { PvfFileEntry, PvfHeader } from "./types";
 
 /** PVF 固定解密密钥 */
@@ -16,18 +17,16 @@ function rotateRight4(x: number, y: number): number {
 }
 
 /**
- * 解密 PVF 数据块
+ * 解密 PVF 数据块（返回新 buffer，不修改原数据）
  * 算法来源: PvfReader.cpp:151-170
- * @param data 要解密的数据（会就地修改）
- * @param len 解密长度（按 4 字节分组处理）
- * @param crc32 CRC32 密钥
  */
 export function decryptPvfData(
 	data: Uint8Array,
 	len: number,
 	crc32: number,
-): void {
-	const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+): Uint8Array {
+	const out = new Uint8Array(data);
+	const view = new DataView(out.buffer, out.byteOffset, out.byteLength);
 	const wordCount = Math.floor(len / 4);
 	const key = (PASSWORD_PVF ^ crc32) >>> 0;
 
@@ -37,6 +36,8 @@ export function decryptPvfData(
 		const decrypted = rotateRight4((value ^ key) >>> 0, 6);
 		view.setUint32(offset, decrypted, true);
 	}
+
+	return out;
 }
 
 /**
@@ -61,38 +62,6 @@ export function readPvfHeader(buffer: Buffer): PvfHeader {
 }
 
 /**
- * 从字节数组读取以 null 结尾的字符串
- * 使用 latin1 编码（兼容 CP949 字节流）
- */
-function readNullTerminatedString(bytes: Uint8Array): string {
-	let len = bytes.length;
-	for (let i = 0; i < bytes.length; i++) {
-		if (bytes[i] === 0) {
-			len = i;
-			break;
-		}
-	}
-	// 使用 latin1 保持字节原样，避免 UTF-8 解码错误
-	return Buffer.from(bytes.subarray(0, len)).toString("latin1").trim();
-}
-
-/**
- * 读取小端序 uint32
- */
-function readUint32LE(data: Uint8Array, offset: number): number {
-	const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-	return view.getUint32(offset, true);
-}
-
-/**
- * 读取小端序 int32
- */
-function readInt32LE(data: Uint8Array, offset: number): number {
-	const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-	return view.getInt32(offset, true);
-}
-
-/**
  * 解析 PVF 目录树，返回文件条目列表
  * 算法来源: PvfReader.cpp:96-137
  */
@@ -101,12 +70,12 @@ export function readPvfDirectory(
 	numFiles: number,
 	baseOffset: number,
 ): PvfFileEntry[] {
+	const reader = new BufferReader(Buffer.from(dirTreeData));
 	const entries: PvfFileEntry[] = [];
-	let offset = 0;
 
 	for (let i = 0; i < numFiles; i++) {
-		const fileNumber = readUint32LE(dirTreeData, offset);
-		const filePathLength = readInt32LE(dirTreeData, offset + 4);
+		const fileNumber = reader.readUint32();
+		const filePathLength = reader.readInt32();
 
 		if (filePathLength <= 0 || filePathLength > 4096) {
 			throw new Error(
@@ -114,18 +83,14 @@ export function readPvfDirectory(
 			);
 		}
 
-		const pathBytes = dirTreeData.subarray(
-			offset + 8,
-			offset + 8 + filePathLength,
-		);
-		const filePath = readNullTerminatedString(pathBytes);
+		const filePath = reader
+			.readAsciiString(filePathLength)
+			.replace(/\0/g, "")
+			.trim();
 
-		const fileLength = readInt32LE(dirTreeData, offset + 8 + filePathLength);
-		const fileCrc32 = readUint32LE(dirTreeData, offset + 12 + filePathLength);
-		const relativeOffset = readInt32LE(
-			dirTreeData,
-			offset + 16 + filePathLength,
-		);
+		const fileLength = reader.readInt32();
+		const fileCrc32 = reader.readUint32();
+		const relativeOffset = reader.readInt32();
 
 		entries.push({
 			fileNumber,
@@ -136,8 +101,6 @@ export function readPvfDirectory(
 			relativeOffset,
 			absoluteOffset: baseOffset + relativeOffset,
 		});
-
-		offset += filePathLength + 20;
 	}
 
 	return entries;
@@ -145,20 +108,32 @@ export function readPvfDirectory(
 
 /**
  * 读取 PVF 文件，返回文件条目列表
+ * getFileData 按需从磁盘读取，不持有整个文件 buffer
  */
-export function readPvf(buffer: Buffer): {
+export async function readPvf(pvfPath: string): Promise<{
 	header: PvfHeader;
 	entries: PvfFileEntry[];
-	getFileData: (entry: PvfFileEntry) => Buffer;
-} {
-	const header = readPvfHeader(buffer);
+	getFileData: (entry: PvfFileEntry) => Promise<Buffer>;
+}> {
+	const file = Bun.file(pvfPath);
 
-	// 读取并解密目录树
-	const dirTreeOffset = PVF_HEADER_SIZE;
-	const dirTreeData = new Uint8Array(
-		buffer.subarray(dirTreeOffset, dirTreeOffset + header.dirTreeLength),
+	// 只读取 header + 目录树到内存
+	const headerBuf = new Uint8Array(
+		await file.slice(0, PVF_HEADER_SIZE).arrayBuffer(),
 	);
-	decryptPvfData(dirTreeData, header.dirTreeLength, header.dirTreeChecksum);
+	const header = readPvfHeader(Buffer.from(headerBuf));
+
+	const dirTreeOffset = PVF_HEADER_SIZE;
+	const dirTreeRaw = new Uint8Array(
+		await file
+			.slice(dirTreeOffset, dirTreeOffset + header.dirTreeLength)
+			.arrayBuffer(),
+	);
+	const dirTreeData = decryptPvfData(
+		dirTreeRaw,
+		header.dirTreeLength,
+		header.dirTreeChecksum,
+	);
 
 	// 解析目录树
 	const dataBaseOffset = PVF_HEADER_SIZE + header.dirTreeLength;
@@ -169,10 +144,10 @@ export function readPvf(buffer: Buffer): {
 	);
 
 	/**
-	 * 获取指定条目的文件数据（自动解密）
+	 * 按需从磁盘读取并解密指定条目的文件数据
 	 * 算法来源: PvfNode.cpp:32-47
 	 */
-	function getFileData(entry: PvfFileEntry): Buffer {
+	async function getFileData(entry: PvfFileEntry): Promise<Buffer> {
 		if (entry.fileLength <= 0) {
 			return Buffer.alloc(0);
 		}
@@ -181,17 +156,16 @@ export function readPvf(buffer: Buffer): {
 		const computedLength = (entry.fileLength + 3) & 0xfffffffc;
 
 		const rawData = new Uint8Array(
-			buffer.subarray(
-				entry.absoluteOffset,
-				entry.absoluteOffset + computedLength,
-			),
+			await file
+				.slice(entry.absoluteOffset, entry.absoluteOffset + computedLength)
+				.arrayBuffer(),
 		);
 
-		// 解密文件内容
-		decryptPvfData(rawData, computedLength, entry.fileCrc32);
+		// 解密文件内容（返回新 buffer，不修改原数据）
+		const decrypted = decryptPvfData(rawData, computedLength, entry.fileCrc32);
 
 		// 只返回实际长度（去掉末尾补零）
-		return Buffer.from(rawData.subarray(0, entry.fileLength));
+		return Buffer.from(decrypted.subarray(0, entry.fileLength));
 	}
 
 	return { header, entries, getFileData };

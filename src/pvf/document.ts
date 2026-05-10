@@ -1,4 +1,5 @@
 import { BufferReader } from "./buffer-reader";
+import type { PvfStringContext } from "./types";
 
 /** ValueType enum (C++ ValueType.h) */
 enum ValueType {
@@ -37,16 +38,12 @@ function createNode(name: string, hasEndTag: boolean): DocNode {
  * 解析二进制 Document 文件
  * C++ 参考: PvfDocument::unpack()
  *
- * stringBinMap 中的值格式:
+ * ctx.binMap 中的值格式:
  * - 开标签: "[tagname]"
  * - 闭标签: "[/tagname]"
  * - 普通字符串: "some_text"
  */
-export function parseDocument(
-	buffer: Buffer,
-	stringBinMap: string[],
-	stringStringMap: Map<string, string>,
-): DocTree {
+export function parseDocument(buffer: Buffer, ctx: PvfStringContext): DocTree {
 	const root = createNode("root", false);
 
 	if (buffer.length <= 7) {
@@ -57,14 +54,14 @@ export function parseDocument(
 	const _header = reader.readInt16(); // magic header (2)
 
 	// First pass: collect all section tag names to determine hasEndTag
-	// C++ 中 tags 存储的是 stringBinMap[index] 的原始值（包含 [ 和 ]）
+	// C++ 中 tags 存储的是 ctx.binMap[index] 的原始值（包含 [ 和 ]）
 	const tags = new Set<string>();
 	while (reader.getRemaining() > 4) {
 		const type = reader.readUint8();
 		if (type >= 2 && type <= 10) {
 			const index = reader.readInt32();
 			if (type === ValueType.Section) {
-				const name = stringBinMap[index] || "";
+				const name = ctx.binMap[index] || "";
 				tags.add(name);
 			}
 		}
@@ -113,8 +110,8 @@ export function parseDocument(
 			}
 
 			case ValueType.Section: {
-				// stringBinMap[index] 的值格式: "[tagname]" 或 "[/tagname]"
-				const rawName = stringBinMap[index] || "";
+				// ctx.binMap[index] 的值格式: "[tagname]" 或 "[/tagname]"
+				const rawName = ctx.binMap[index] || "";
 
 				if (rawName.startsWith("[/") && rawName.endsWith("]")) {
 					// 闭标签: "[/tagname]" → 提取 "tagname"
@@ -150,21 +147,21 @@ export function parseDocument(
 			}
 
 			case ValueType.String: {
-				const str = stringBinMap[index] || "";
+				const str = ctx.binMap[index] || "";
 				node.attributes.push({ type: "string", value: str });
 				break;
 			}
 
 			case ValueType.Command:
 			case ValueType.CommandSeparator: {
-				const str = stringBinMap[index] || "";
+				const str = ctx.binMap[index] || "";
 				node.attributes.push({ type: "string", value: str });
 				break;
 			}
 
 			case ValueType.StringLink: {
-				const key = stringBinMap[index] || "";
-				const resolved = stringStringMap.get(key) || key;
+				const key = ctx.binMap[index] || "";
+				const resolved = ctx.stringMap.get(key) || key;
 				node.attributes.push({ type: "string", value: resolved });
 				break;
 			}

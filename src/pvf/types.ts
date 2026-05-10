@@ -36,3 +36,12 @@ export interface PvfFileEntry {
 	/** 在 PVF 文件中的绝对偏移 */
 	absoluteOffset: number;
 }
+
+/**
+ * PVF 字符串表上下文
+ * 封装 stringtable.bin 解析结果和 n_string.lst 翻译表
+ */
+export interface PvfStringContext {
+	binMap: string[];
+	stringMap: Map<string, string>;
+}

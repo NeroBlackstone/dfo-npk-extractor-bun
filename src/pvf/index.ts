@@ -5,4 +5,4 @@ export {
 	readPvf,
 	readPvfHeader,
 } from "./reader";
-export type { PvfFileEntry, PvfHeader } from "./types";
+export type { PvfFileEntry, PvfHeader, PvfStringContext } from "./types";
