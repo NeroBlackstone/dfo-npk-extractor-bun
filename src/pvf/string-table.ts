@@ -33,8 +33,10 @@ export function parseStringTable(data: Buffer): string[] {
 
 		const strStart = startPos + STRING_TABLE_HEADER_SIZE;
 		const strBytes = data.subarray(strStart, strStart + len);
-		const str = decodeAuto(strBytes).toLowerCase().trim();
-		map[i] = str;
+		const decoded = decodeAuto(strBytes);
+		const trimmed = decoded.trim();
+		// 如果首尾没有空格，说明本来就不需要 lowerCase
+		map[i] = trimmed === decoded ? trimmed : trimmed.toLowerCase();
 	}
 
 	return map;

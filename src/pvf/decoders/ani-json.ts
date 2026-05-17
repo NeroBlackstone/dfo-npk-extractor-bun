@@ -45,7 +45,8 @@ function frameToJson(frame: AniFrame): object {
 	if (frame.sound !== "") result.sound = frame.sound;
 	if (frame.setFlag !== 0) result.setFlag = frame.setFlag;
 	if (frame.flipType !== 0) result.flipType = frame.flipType;
-	if (!arrayEquals(frame.clip, [0, 0, 0, 0])) result.clip = frame.clip;
+	if (frame.clip[0] !== 0 || frame.clip[1] !== 0 || frame.clip[2] !== 0 || frame.clip[3] !== 0)
+		result.clip = frame.clip;
 	if (frame.loopStart !== false) result.loopStart = frame.loopStart;
 	if (frame.loopEnd !== 0) result.loopEnd = frame.loopEnd;
 	if (frame.itemType !== 0) result.itemType = frame.itemType;
@@ -57,14 +58,6 @@ function frameToJson(frame: AniFrame): object {
 		result.attackBox = frame.attackBox.map((box) => box.values);
 
 	return result;
-}
-
-function arrayEquals(a: number[], b: number[]): boolean {
-	if (a.length !== b.length) return false;
-	for (let i = 0; i < a.length; i++) {
-		if (a[i] !== b[i]) return false;
-	}
-	return true;
 }
 
 function toHexString(value: number): string {
