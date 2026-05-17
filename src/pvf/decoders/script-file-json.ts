@@ -40,8 +40,7 @@ export function parseScriptFileToJson(
 	const closingMap = buildClosingMap(tokens);
 	const sectionMap = buildSectionMap(tokens, closingMap);
 
-	const result = parseSections(tokens, ctx, sectionMap, closingMap, 0);
-	return result;
+	return parseSections(tokens, ctx, sectionMap, closingMap, 0);
 }
 
 function parseTokens(data: Buffer, ctx: PvfStringContext): Token[] {
@@ -179,7 +178,6 @@ function parseSections(
 					i + 1,
 					ctx,
 					sectionMap,
-					closingMap,
 				);
 				const obj: { [key: string]: unknown } = {};
 				obj[normalizeKey(cleanName)] = values.length > 0 ? values : null;
@@ -245,20 +243,17 @@ function parseContainerSection(
 					i + 1,
 					ctx,
 					sectionMap,
-					closingMap,
 				);
 				const obj: { [key: string]: unknown } = {};
 				obj[normalizeKey(cleanName)] = values.length > 0 ? values : null;
 				items.push(obj);
 				i = consumed;
 			}
-		} else if (token.type !== 8) {
+		} else {
 			const val = tokenToValue(token, ctx, i, tokens);
 			if (val !== undefined) {
 				items.push(val);
 			}
-			i++;
-		} else {
 			i++;
 		}
 	}
@@ -271,7 +266,6 @@ function parseLeafSection(
 	start: number,
 	ctx: PvfStringContext,
 	sectionMap: Map<string, { isContainer: boolean; idx: number }>,
-	_closingMap: Map<string, number>,
 ): { values: unknown[]; consumed: number } {
 	const values: unknown[] = [];
 	let i = start;
