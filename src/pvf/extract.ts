@@ -63,7 +63,10 @@ export async function extractPvf(options: PvfExtractOptions): Promise<{
 
 		const safePath = entry.filePath.replace(/\\/g, "/").replace(/^\//, "");
 		const lowerPath2 = entry.filePath.toLowerCase();
-		const isJsonOutput = isScriptFile(data) || lowerPath2.endsWith(".str");
+		const isJsonOutput =
+			isScriptFile(data) ||
+			lowerPath2.endsWith(".str") ||
+			lowerPath2.endsWith(".ani");
 		const outPath = `${outputDir}/${safePath}${isJsonOutput ? ".json" : ""}`;
 		ensureDir(dirname(outPath));
 

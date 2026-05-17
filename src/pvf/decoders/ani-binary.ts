@@ -125,15 +125,6 @@ function defaultFrame(): AniFrame {
  * C++ 参考: PvfAnimation::unpack()
  */
 export function parseBinaryAni(buffer: Buffer): AniData {
-	// 检查是否已经是文本格式
-	if (buffer.length > 0 && buffer[0] === 0x23) {
-		// 0x23 = '#', 可能是 #PVF_File 文本格式
-		const head = buffer.toString("ascii", 0, Math.min(9, buffer.length));
-		if (head.startsWith("#PVF_File")) {
-			throw new Error("File is already in text format");
-		}
-	}
-
 	const reader = new BufferReader(buffer);
 
 	const framesCount = reader.readUint16();

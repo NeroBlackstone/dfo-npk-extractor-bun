@@ -1,7 +1,7 @@
 import { decodeBig5, decodeEucKr } from "../encoding";
 import type { PvfStringContext } from "../types";
 import { parseBinaryAni } from "./ani-binary";
-import { serializeAniToText } from "./ani-text";
+import { serializeAniToJson } from "./ani-json";
 import { isScriptFile } from "./script-file";
 import { parseScriptFileToJson } from "./script-file-json";
 import { convertStrToJson } from "./str-json";
@@ -23,8 +23,8 @@ export interface PvfDecoder {
  * 按优先级排列：magic number 检测优先于扩展名匹配
  *
  * 1. ScriptFile   — magic 0xD0B0
- * 2. 纯文本 content — 首字节 0x23 (#)
- * 3. ANI          — .ani 扩展名（无 magic）
+ * 2. 文本 content — 首字节 0x23 (#)
+ * 3. ANI          — .ani 扩展名
  * 4. 文本 .str    — Big5
  * 5. 文本 .txt    — Big5
  * 6. 文本 .nut    — EUC-KR
@@ -46,7 +46,7 @@ export const decoders: PvfDecoder[] = [
 		match: (filePath) => filePath.endsWith(".ani"),
 		convert: (data) => {
 			const aniData = parseBinaryAni(data);
-			return serializeAniToText(aniData);
+			return serializeAniToJson(aniData);
 		},
 	},
 	{
