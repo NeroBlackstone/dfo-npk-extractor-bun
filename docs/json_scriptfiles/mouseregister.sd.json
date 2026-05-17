@@ -1,8 +1,25 @@
 [
-  {
-    "int": ["okb1", 36, "okb2", 37, "okb3", 38, "okb4", 39, "modebtn1", 8, "modebtn2", 7, "modebtn3", 6, "modebtn4", 9]
-  },
-  {
-    "float": ["tf1", 100]
-  }
+	{
+		"int": [
+			"okb1",
+			36,
+			"okb2",
+			37,
+			"okb3",
+			38,
+			"okb4",
+			39,
+			"modebtn1",
+			8,
+			"modebtn2",
+			7,
+			"modebtn3",
+			6,
+			"modebtn4",
+			9
+		]
+	},
+	{
+		"float": ["tf1", 100]
+	}
 ]

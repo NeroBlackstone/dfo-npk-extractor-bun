@@ -1,23 +1,23 @@
 [
-  {
-    "ambient": [
-      {
-        "all": [
-          "creature/sdcharacter/fighter/talk_stand1.ani",
-          "creature/sdcharacter/fighter/talk_stand2.ani"
-        ]
-      }
-    ]
-  },
-  {
-    "trigger": [
-      {
-        "all": [
-          { "call_the_name": ["creature/sdcharacter/fighter/talk_call.ani"] },
-          { "using_skill": ["creature/sdcharacter/fighter/talk_skill.ani"] },
-          { "state_special": ["creature/sdcharacter/fighter/talk_random.ani"] }
-        ]
-      }
-    ]
-  }
+	{
+		"ambient": [
+			{
+				"all": [
+					"creature/sdcharacter/fighter/talk_stand1.ani",
+					"creature/sdcharacter/fighter/talk_stand2.ani"
+				]
+			}
+		]
+	},
+	{
+		"trigger": [
+			{
+				"all": [
+					{ "call_the_name": ["creature/sdcharacter/fighter/talk_call.ani"] },
+					{ "using_skill": ["creature/sdcharacter/fighter/talk_skill.ani"] },
+					{ "state_special": ["creature/sdcharacter/fighter/talk_random.ani"] }
+				]
+			}
+		]
+	}
 ]

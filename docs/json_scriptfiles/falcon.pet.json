@@ -1,13 +1,13 @@
 [
-  { "width": [16, 8] },
-  { "floating_height": [80] },
-  { "layer": ["[normal]"] },
-  { "recovery_time": [5000] },
-  { "direction_correct": [1] },
-  { "gravity": [0] },
-  { "basic_motion": ["animation/rest.ani"] },
-  { "etc_motion": ["animation/tackle.ani"] },
-  { "attack_info": ["attackinfo/tackle.atk"] },
-  { "int_data": [700, -80, 500, 100] },
-  { "name": ["七彩符咒"] }
+	{ "width": [16, 8] },
+	{ "floating_height": [80] },
+	{ "layer": ["[normal]"] },
+	{ "recovery_time": [5000] },
+	{ "direction_correct": [1] },
+	{ "gravity": [0] },
+	{ "basic_motion": ["animation/rest.ani"] },
+	{ "etc_motion": ["animation/tackle.ani"] },
+	{ "attack_info": ["attackinfo/tackle.atk"] },
+	{ "int_data": [700, -80, 500, 100] },
+	{ "name": ["七彩符咒"] }
 ]

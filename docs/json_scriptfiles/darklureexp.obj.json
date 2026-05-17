@@ -1,10 +1,10 @@
 [
-  { "floating_height": [1] },
-  { "layer": ["[normal]"] },
-  { "pass_type": ["[pass all]"] },
-  { "piercing_power": [1000] },
-  { "basic_motion": ["animation/darklure/bead_exp.ani"] },
-  { "etc_motion": ["animation/darklure/bead_exp_ghost_dodge.ani"] },
-  { "attack_info": ["attackinfo/darklure.atk"] },
-  { "name": ["古代帝王之魂"] }
+	{ "floating_height": [1] },
+	{ "layer": ["[normal]"] },
+	{ "pass_type": ["[pass all]"] },
+	{ "piercing_power": [1000] },
+	{ "basic_motion": ["animation/darklure/bead_exp.ani"] },
+	{ "etc_motion": ["animation/darklure/bead_exp_ghost_dodge.ani"] },
+	{ "attack_info": ["attackinfo/darklure.atk"] },
+	{ "name": ["古代帝王之魂"] }
 ]

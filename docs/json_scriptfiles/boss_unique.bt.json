@@ -1,4 +1,1 @@
-[
-  { "type": ["boss unique"] },
-  { "enter_dungeon": [1] }
-]
+[{ "type": ["boss unique"] }, { "enter_dungeon": [1] }]

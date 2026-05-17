@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { parseScriptFileToJson } from "./script-file-json";
 import type { PvfStringContext } from "../types";
+import { parseScriptFileToJson } from "./script-file-json";
 
 function buildBuffer(tokens: { t: number; v: number }[]): Buffer {
 	const buf = Buffer.alloc(2 + tokens.length * 5);
@@ -115,9 +115,12 @@ describe("parseScriptFileToJson", () => {
 		test("three levels of nesting", () => {
 			// [level1] [level2] [level3] 999 [/level3] [/level2] [/level1]
 			const ctx = makeCtx([
-				"[level1]", "[/level1]",
-				"[level2]", "[/level2]",
-				"[level3]", "[/level3]",
+				"[level1]",
+				"[/level1]",
+				"[level2]",
+				"[/level2]",
+				"[level3]",
+				"[/level3]",
 			]);
 			const buf = buildBuffer([
 				{ t: 5, v: 0 },
@@ -186,9 +189,12 @@ describe("parseScriptFileToJson", () => {
 			const ctx = makeCtx(["[val]", "[/val]"]);
 			const buf = Buffer.alloc(2 + 3 * 5);
 			buf.writeUInt16LE(0xd0b0, 0);
-			buf.writeUInt8(5, 2); buf.writeInt32LE(0, 3); // [val]
-			buf.writeUInt8(4, 7); buf.writeFloatLE(3.14, 8); // float 3.14
-			buf.writeUInt8(5, 12); buf.writeInt32LE(1, 13); // [/val]
+			buf.writeUInt8(5, 2);
+			buf.writeInt32LE(0, 3); // [val]
+			buf.writeUInt8(4, 7);
+			buf.writeFloatLE(3.14, 8); // float 3.14
+			buf.writeUInt8(5, 12);
+			buf.writeInt32LE(1, 13); // [/val]
 			const result = parseScriptFileToJson(buf, ctx);
 			// Float is returned as string, 3.14 in IEEE 754 is approximated
 			expect(result).toEqual([{ val: ["3.140000104904175"] }]);
@@ -301,10 +307,14 @@ describe("parseScriptFileToJson", () => {
 			// binMap indices: 0=[skill_tree], 1=[/skill_tree], 2=[swordman], 3=[/swordman],
 			//                 4=[fighter], 5=[/fighter], 6=path1, 7=path2
 			const ctx = makeCtx([
-				"[skill_tree]", "[/skill_tree]",
-				"[swordman]", "[/swordman]",
-				"[fighter]", "[/fighter]",
-				"path1", "path2",
+				"[skill_tree]",
+				"[/skill_tree]",
+				"[swordman]",
+				"[/swordman]",
+				"[fighter]",
+				"[/fighter]",
+				"path1",
+				"path2",
 			]);
 			const buf = buildBuffer([
 				{ t: 5, v: 0 },
@@ -315,12 +325,19 @@ describe("parseScriptFileToJson", () => {
 				{ t: 5, v: 1 },
 			]);
 			const result = parseScriptFileToJson(buf, ctx);
-			expect(result).toEqual([{ skill_tree: ["[swordman]", "path1", "[fighter]", "path2"] }]);
+			expect(result).toEqual([
+				{ skill_tree: ["[swordman]", "path1", "[fighter]", "path2"] },
+			]);
 		});
 
 		test("attack pattern with multiple int values", () => {
 			// [damage] 100 [/damage] [push_aside] 50 [/push_aside]
-			const ctx = makeCtx(["[damage]", "[/damage]", "[push_aside]", "[/push_aside]"]);
+			const ctx = makeCtx([
+				"[damage]",
+				"[/damage]",
+				"[push_aside]",
+				"[/push_aside]",
+			]);
 			const buf = buildBuffer([
 				{ t: 5, v: 0 },
 				{ t: 2, v: 100 },

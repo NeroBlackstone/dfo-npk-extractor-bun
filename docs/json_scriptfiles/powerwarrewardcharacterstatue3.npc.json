@@ -1,13 +1,16 @@
 [
-  { "name": [""] },
-  { "field_name": [""] },
-  { "field_animation": ["animation/powerwarrewardcharacterstatue3rd.ani"] },
-  { "field_wav": [""] },
-  { "popup_wav": ["", ""] },
-  { "look_around": [0] },
-  { "role": ["[powerwar statue]", 3] },
-  {
-    "string_data": ["npc/animation/powerwarrewardbanner3rd.ani", "勢力戰排行榜第3名%s大人的對話方塊消息。"]
-  },
-  { "int_data": [10] }
+	{ "name": [""] },
+	{ "field_name": [""] },
+	{ "field_animation": ["animation/powerwarrewardcharacterstatue3rd.ani"] },
+	{ "field_wav": [""] },
+	{ "popup_wav": ["", ""] },
+	{ "look_around": [0] },
+	{ "role": ["[powerwar statue]", 3] },
+	{
+		"string_data": [
+			"npc/animation/powerwarrewardbanner3rd.ani",
+			"勢力戰排行榜第3名%s大人的對話方塊消息。"
+		]
+	},
+	{ "int_data": [10] }
 ]

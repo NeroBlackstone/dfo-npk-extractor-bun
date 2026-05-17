@@ -1,14 +1,16 @@
 [
-  {
-    "map_image": ["worldmap/behemoth.img", 0]
-  },
-  {
-    "ui_path": ["worldmap/ui/behemoth.ui"]
-  },
-  {
-    "dungeon": [21, -1, 22, -1, 23, -1, 24, -1, 25, -1, 91, -1, 26, -1, 90, -1, 27, 452]
-  },
-  {
-    "name": ["天帷巨獸"]
-  }
+	{
+		"map_image": ["worldmap/behemoth.img", 0]
+	},
+	{
+		"ui_path": ["worldmap/ui/behemoth.ui"]
+	},
+	{
+		"dungeon": [
+			21, -1, 22, -1, 23, -1, 24, -1, 25, -1, 91, -1, 26, -1, 90, -1, 27, 452
+		]
+	},
+	{
+		"name": ["天帷巨獸"]
+	}
 ]

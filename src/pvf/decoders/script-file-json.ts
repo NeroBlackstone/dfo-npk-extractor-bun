@@ -14,14 +14,14 @@ function formatFloat(value: number): string {
 }
 
 function normalizeKey(name: string): string {
-	return name.replace(/[\[\]]/g, "").replace(/ /g, "_");
+	return name.replace(/[[\]]/g, "").replace(/ /g, "_");
 }
 
 function getSectionName(name: string): string {
 	if (name.startsWith("[/")) {
 		return name.slice(2, -1);
 	}
-	return name.replace(/[\[\]]/g, "");
+	return name.replace(/[[\]]/g, "");
 }
 
 function isClosingSection(name: string): boolean {
@@ -48,7 +48,9 @@ function parseTokens(data: Buffer, ctx: PvfStringContext): Token[] {
 	const tokens: Token[] = [];
 
 	for (let index = 2; index < data.length - 4; index += 5) {
-		const type = data[index]!;
+		const byte = data[index];
+		if (byte === undefined) break;
+		const type = byte;
 		const value = data.readInt32LE(index + 1);
 
 		const token: Token = { type, value };
@@ -58,7 +60,13 @@ function parseTokens(data: Buffer, ctx: PvfStringContext): Token[] {
 		} else if (type === 9) {
 			// StringLinkIndex: store the listId for the next type 10 token
 			token.listId = value;
-		} else if (type === 5 || type === 6 || type === 7 || type === 8 || type === 10) {
+		} else if (
+			type === 5 ||
+			type === 6 ||
+			type === 7 ||
+			type === 8 ||
+			type === 10
+		) {
 			token.strValue = ctx.binMap[value] || "";
 		}
 
@@ -71,7 +79,8 @@ function parseTokens(data: Buffer, ctx: PvfStringContext): Token[] {
 function buildClosingMap(tokens: Token[]): Map<string, number> {
 	const closing = new Map<string, number>();
 	for (let i = 0; i < tokens.length; i++) {
-		const token = tokens[i]!;
+		const token = tokens[i];
+		if (!token) break;
 		if (token.type === 5 && token.strValue) {
 			const name = token.strValue;
 			if (isClosingSection(name)) {
@@ -86,14 +95,12 @@ function buildSectionMap(
 	tokens: Token[],
 	closingMap: Map<string, number>,
 ): Map<string, { isContainer: boolean; idx: number }> {
-	const sectionMap = new Map<
-		string,
-		{ isContainer: boolean; idx: number }
-	>();
+	const sectionMap = new Map<string, { isContainer: boolean; idx: number }>();
 
 	// First pass: record all opening section tokens
 	for (let i = 0; i < tokens.length; i++) {
-		const token = tokens[i]!;
+		const token = tokens[i];
+		if (!token) break;
 		if (token.type === 5 && token.strValue) {
 			const name = token.strValue;
 			if (!isClosingSection(name)) {
@@ -110,7 +117,8 @@ function buildSectionMap(
 		const closingIdx = closingMap.get(name);
 		if (closingIdx !== undefined) {
 			for (let i = info.idx + 1; i < closingIdx; i++) {
-				const token = tokens[i]!;
+				const token = tokens[i];
+				if (!token) break;
 				if (token.type === 5 && token.strValue) {
 					const n = token.strValue;
 					if (!isClosingSection(n)) {
@@ -136,7 +144,11 @@ function parseSections(
 	let i = startIdx;
 
 	while (i < tokens.length) {
-		const token = tokens[i]!;
+		const token = tokens[i];
+		if (!token) {
+			i++;
+			continue;
+		}
 
 		if (token.type === 5 && token.strValue) {
 			const name = token.strValue;
@@ -194,7 +206,11 @@ function parseContainerSection(
 	let i = start;
 
 	while (i < tokens.length) {
-		const token = tokens[i]!;
+		const token = tokens[i];
+		if (!token) {
+			i++;
+			continue;
+		}
 
 		if (token.type === 5 && token.strValue) {
 			const name = token.strValue;
@@ -255,13 +271,17 @@ function parseLeafSection(
 	start: number,
 	ctx: PvfStringContext,
 	sectionMap: Map<string, { isContainer: boolean; idx: number }>,
-	closingMap: Map<string, number>,
+	_closingMap: Map<string, number>,
 ): { values: unknown[]; consumed: number } {
 	const values: unknown[] = [];
 	let i = start;
 
 	while (i < tokens.length) {
-		const token = tokens[i]!;
+		const token = tokens[i];
+		if (!token) {
+			i++;
+			continue;
+		}
 
 		if (token.type === 5 && token.strValue) {
 			const name = token.strValue;
@@ -289,14 +309,21 @@ function parseLeafSection(
 	return { values, consumed: i };
 }
 
-function tokenToValue(token: Token, ctx: PvfStringContext, index: number, tokens: Token[]): unknown {
+function tokenToValue(
+	token: Token,
+	ctx: PvfStringContext,
+	index: number,
+	tokens: Token[],
+): unknown {
 	switch (token.type) {
 		case 2:
 		case 3:
 			return token.value;
 
 		case 4:
-			return token.floatValue !== undefined ? formatFloat(token.floatValue) : token.value;
+			return token.floatValue !== undefined
+				? formatFloat(token.floatValue)
+				: token.value;
 
 		case 6:
 		case 7:

@@ -1,11 +1,11 @@
 [
-  { "entering_title": ["title/timegaterequiem.ani"] },
-  { "cutscene_image": ["map/cutscene/timegate.img", 0] },
-  { "dungeon_what_must_be_cleared": [-1] },
-  {
-    "area": [0, "timegaterequiem/timegaterequiemwr.map", "[dungeon gate]", 18]
-  },
-  { "name": ["海上列車"] },
-  { "limit_level": [82] },
-  { "need_quest": [4540] }
+	{ "entering_title": ["title/timegaterequiem.ani"] },
+	{ "cutscene_image": ["map/cutscene/timegate.img", 0] },
+	{ "dungeon_what_must_be_cleared": [-1] },
+	{
+		"area": [0, "timegaterequiem/timegaterequiemwr.map", "[dungeon gate]", 18]
+	},
+	{ "name": ["海上列車"] },
+	{ "limit_level": [82] },
+	{ "need_quest": [4540] }
 ]

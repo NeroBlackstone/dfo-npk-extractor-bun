@@ -1,11 +1,11 @@
 [
-  { "type": ["change status"] },
-  { "duration": [20000] },
-  { "effect_animation": [""] },
-  { "buff": [1] },
-  { "icon_image": ["", 0] },
-  { "max_overlap": [3] },
-  { "string_data": ["physical critical hit rate"] },
-  { "int_data": [0] },
-  { "float_data": [7.0] }
+	{ "type": ["change status"] },
+	{ "duration": [20000] },
+	{ "effect_animation": [""] },
+	{ "buff": [1] },
+	{ "icon_image": ["", 0] },
+	{ "max_overlap": [3] },
+	{ "string_data": ["physical critical hit rate"] },
+	{ "int_data": [0] },
+	{ "float_data": [7.0] }
 ]

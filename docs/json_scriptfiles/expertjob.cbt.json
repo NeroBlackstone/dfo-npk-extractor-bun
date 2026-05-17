@@ -1,8 +1,16 @@
 [
-  {
-    "changeable_button": ["[img index]", 16, "[button index]", 30, 31, 32, 30]
-  },
-  {
-    "changeable_button": ["[img path]", "interface/commonbtn01.img", "[button index]", 30, 31, 32, 30]
-  }
+	{
+		"changeable_button": ["[img index]", 16, "[button index]", 30, 31, 32, 30]
+	},
+	{
+		"changeable_button": [
+			"[img path]",
+			"interface/commonbtn01.img",
+			"[button index]",
+			30,
+			31,
+			32,
+			30
+		]
+	}
 ]
