@@ -1,8 +1,8 @@
-import { writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { ensureDir } from "../utils/file";
 import { buildStringContext } from "./build-string-context";
 import { convertFile } from "./convert-file";
+import type { ConvertResult } from "./decoders";
 import { isScriptFile } from "./decoders/script-file";
 import { convertNameList } from "./name-list";
 import { readPvf } from "./reader";
@@ -14,6 +14,9 @@ export interface PvfExtractOptions {
 	/** 输出目录 */
 	outputDir: string;
 }
+
+/** 并发处理上限 */
+const CONCURRENCY = 64;
 
 /**
  * 提取单个 PVF 文件
@@ -37,29 +40,40 @@ export async function extractPvf(options: PvfExtractOptions): Promise<{
 
 	const strCtx = await buildStringContext(entryByPath, getFileData);
 
-	let extractedCount = 0;
+	// 预先创建所有需要的目录
+	const dirsToCreate = new Set<string>();
+	dirsToCreate.add(outputDir);
 	for (const entry of entries) {
+		const safePath = entry.filePath.replace(/\\/g, "/").replace(/^\//, "");
+		dirsToCreate.add(dirname(`${outputDir}/${safePath}`));
+	}
+	for (const dir of dirsToCreate) {
+		ensureDir(dir);
+	}
+
+	let extractedCount = 0;
+
+	async function processEntry(entry: PvfFileEntry): Promise<{
+		path: string;
+		data: ConvertResult;
+	} | null> {
 		const lowerPath = entry.filePath.toLowerCase();
 
 		// 跳过 stringtable.bin
-		if (lowerPath === "stringtable.bin") continue;
+		if (lowerPath === "stringtable.bin") return null;
 
 		// 跳过所有 .lst 文件（name-list 输出 JSON，其余不导出）
 		if (lowerPath.endsWith(".lst")) {
 			const data = await getFileData(entry);
-			if (data.length === 0) continue;
-			const json = convertNameList(data, strCtx);
-			if (!json) continue;
+			if (data.length === 0) return null;
+			const obj = convertNameList(data, strCtx);
+			if (!obj) return null;
 			const safePath = entry.filePath.replace(/\\/g, "/").replace(/^\//, "");
-			const outPath = `${outputDir}/${safePath}.json`;
-			ensureDir(dirname(outPath));
-			writeFileSync(outPath, json);
-			extractedCount++;
-			continue;
+			return { path: `${outputDir}/${safePath}.json`, data: obj };
 		}
 
 		const data = await getFileData(entry);
-		if (data.length === 0) continue;
+		if (data.length === 0) return null;
 
 		const safePath = entry.filePath.replace(/\\/g, "/").replace(/^\//, "");
 		const lowerPath2 = entry.filePath.toLowerCase();
@@ -68,12 +82,33 @@ export async function extractPvf(options: PvfExtractOptions): Promise<{
 			lowerPath2.endsWith(".str") ||
 			lowerPath2.endsWith(".ani");
 		const outPath = `${outputDir}/${safePath}${isJsonOutput ? ".json" : ""}`;
-		ensureDir(dirname(outPath));
 
 		const outputData = convertFile(data, entry.filePath, strCtx);
-		writeFileSync(outPath, outputData);
-		extractedCount++;
+		return { path: outPath, data: outputData };
 	}
+
+	// 分块并发处理
+	const pending: Array<{ path: string; data: ConvertResult }> = [];
+	for (let i = 0; i < entries.length; i += CONCURRENCY) {
+		const chunk = entries.slice(i, i + CONCURRENCY);
+		const results = await Promise.all(chunk.map((e) => processEntry(e)));
+		for (const r of results) {
+			if (r) {
+				pending.push(r);
+				extractedCount++;
+			}
+		}
+	}
+
+	// 批量 JSON.stringify + 写入
+	await Promise.all(
+		pending.map((p) =>
+			Bun.write(
+				p.path,
+				typeof p.data === "object" ? JSON.stringify(p.data, null, 2) : p.data,
+			),
+		),
+	);
 
 	console.log(`Extracted ${extractedCount} files to ${outputDir}`);
 	return { extractedCount, entries };

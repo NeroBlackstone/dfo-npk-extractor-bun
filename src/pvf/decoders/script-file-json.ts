@@ -38,7 +38,7 @@ export function parseScriptFileToJson(
 
 	const tokens = parseTokens(data, ctx);
 	const closingMap = buildClosingMap(tokens);
-	const sectionMap = buildSectionMap(tokens, closingMap);
+	const sectionMap = buildSectionMap(tokens);
 
 	return parseSections(tokens, ctx, sectionMap, closingMap, 0);
 }
@@ -90,40 +90,50 @@ function buildClosingMap(tokens: Token[]): Map<string, number> {
 	return closing;
 }
 
-function buildSectionMap(
-	tokens: Token[],
-	closingMap: Map<string, number>,
-): Map<string, { isContainer: boolean; idx: number }> {
-	const sectionMap = new Map<string, { isContainer: boolean; idx: number }>();
+interface SectionInfo {
+	isContainer: boolean;
+	idx: number;
+}
 
-	// First pass: record all opening section tokens
+/**
+ * 合并为一遍：同时构建 sectionMap 和 closingMap
+ * 用 stack 跟踪当前嵌套层级，遇到 closing 时判断前面的 opening 是否是 container
+ */
+function buildSectionMap(tokens: Token[]): Map<string, SectionInfo> {
+	const sectionMap = new Map<string, SectionInfo>();
+
+	// stack: 每个元素是 [sectionName, openingIdx]
+	// 模拟 XML 标签栈，遇到 [/xxx] 就 pop 并判断 pop 出来的 opening 是不是 container
 	for (let i = 0; i < tokens.length; i++) {
 		const token = tokens[i];
 		if (!token) break;
+
 		if (token.type === 5 && token.strValue) {
 			const name = token.strValue;
-			if (!isClosingSection(name)) {
+
+			if (isClosingSection(name)) {
+				const cleanName = getSectionName(name);
+				const info = sectionMap.get(cleanName);
+				// 判断 children 范围内有没有其他 opening section
+				if (info && !info.isContainer) {
+					// 从 stack 栈顶向下找当前 closing 对应的 opening
+					// children 在 [info.idx+1, i) 范围内
+					for (let j = info.idx + 1; j < i; j++) {
+						const t = tokens[j];
+						if (!t) break;
+						if (t.type === 5 && t.strValue) {
+							const n = t.strValue;
+							if (!isClosingSection(n)) {
+								info.isContainer = true;
+								break;
+							}
+						}
+					}
+				}
+			} else {
 				const cleanName = getSectionName(name);
 				if (!sectionMap.has(cleanName)) {
 					sectionMap.set(cleanName, { isContainer: false, idx: i });
-				}
-			}
-		}
-	}
-
-	// Second pass: determine which are containers
-	for (const [name, info] of sectionMap) {
-		const closingIdx = closingMap.get(name);
-		if (closingIdx !== undefined) {
-			for (let i = info.idx + 1; i < closingIdx; i++) {
-				const token = tokens[i];
-				if (!token) break;
-				if (token.type === 5 && token.strValue) {
-					const n = token.strValue;
-					if (!isClosingSection(n)) {
-						info.isContainer = true;
-						break;
-					}
 				}
 			}
 		}

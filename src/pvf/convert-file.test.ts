@@ -13,18 +13,14 @@ describe("convertFile", () => {
 		const data = await getFileData(entries[2]!);
 		expect(data.readUInt16LE(0)).toBe(0xd0b0);
 		const result = convertFile(data, "test/character.ai", emptyCtx);
-		expect(typeof result).toBe("string");
-		const parsed = JSON.parse(result as string);
-		expect(typeof parsed).toBe("object");
+		expect(typeof result).toBe("object");
 	});
 
 	test("should convert .ani binary to JSON when it has ScriptFile magic", async () => {
 		const { entries, getFileData } = await readPvf(FAKE_PVF_PATH);
 		const data = await getFileData(entries[2]!);
 		const result = convertFile(data, "test/move.ani", emptyCtx);
-		expect(typeof result).toBe("string");
-		const parsed = JSON.parse(result as string);
-		expect(typeof parsed).toBe("object");
+		expect(typeof result).toBe("object");
 	});
 
 	test("should pass through short data unchanged", () => {
@@ -43,16 +39,15 @@ describe("convertFile", () => {
 		// BIG5 encoded "key>value" text
 		const content = Buffer.from("key>value\n// comment\nfoo>bar", "utf-8");
 		const result = convertFile(content, "test.str", emptyCtx);
-		expect(typeof result).toBe("string");
-		const parsed = JSON.parse(result as string);
-		expect(parsed).toEqual({ key: "value", foo: "bar" });
+		expect(typeof result).toBe("object");
+		expect(result).toEqual({ key: "value", foo: "bar" });
 	});
 
 	test("should convert text content starting with #", () => {
 		const data = Buffer.from("#PVF_File\r\nhello");
 		const result = convertFile(data, "foo.bar", emptyCtx);
-		expect(typeof result).toBe("string");
-		expect(result).toBe("#PVF_File\r\nhello");
+		expect(typeof result).toBe("object");
+		expect(result).toEqual({ content: "#PVF_File\r\nhello" });
 	});
 });
 
@@ -67,10 +62,9 @@ describe("convertNameList", () => {
 			stringMap: new Map(),
 		};
 		const result = convertNameList(data, ctx);
-		// Result should be null or a JSON string depending on content
+		// Result should be null or an object depending on content
 		if (result !== null) {
-			const parsed = JSON.parse(result);
-			expect(Array.isArray(parsed)).toBe(true);
+			expect(typeof result).toBe("object");
 		}
 	});
 

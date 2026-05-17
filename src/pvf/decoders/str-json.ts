@@ -4,7 +4,7 @@ import { decodeAuto } from "../encoding";
  * Convert .str file (Big5/EUC-KR text) to JSON object.
  * Format: key>value per line, // comments and blank lines are skipped.
  */
-export function convertStrToJson(data: Buffer): string {
+export function convertStrToJsonObject(data: Buffer): Record<string, string> {
 	const text = decodeAuto(data);
 	const obj: Record<string, string> = {};
 
@@ -22,5 +22,5 @@ export function convertStrToJson(data: Buffer): string {
 		}
 	}
 
-	return JSON.stringify(obj, null, 2);
+	return obj;
 }

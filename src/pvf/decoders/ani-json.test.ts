@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { parseBinaryAni } from "./ani-binary";
-import { serializeAniToJson, aniDataToJson } from "./ani-json";
+import { aniDataToJson, serializeAniToJson } from "./ani-json";
 
 describe("serializeAniToJson", () => {
 	test("should convert binary ANI to JSON with all fields", () => {
@@ -62,9 +62,9 @@ describe("serializeAniToJson", () => {
 		expect(parsed.framesCount).toBe(1);
 		expect(parsed.resources).toEqual(["test.img"]);
 		expect(parsed.frames).toHaveLength(1);
-		expect(parsed.frames[0]!.path).toBe("test.img");
-		expect(parsed.frames[0]!.x).toBe(100);
-		expect(parsed.frames[0]!.y).toBe(200);
+		expect(parsed.frames[0]?.path).toBe("test.img");
+		expect(parsed.frames[0]?.x).toBe(100);
+		expect(parsed.frames[0]?.y).toBe(200);
 	});
 
 	test("should handle multiple frames with boxes", () => {
@@ -215,8 +215,8 @@ describe("serializeAniToJson", () => {
 		const json = serializeAniToJson(aniData);
 		const parsed = JSON.parse(json);
 
-		expect(parsed.frames[0]!.itemType).toBe(5);
-		expect(parsed.frames[0]!.effectColor).toEqual({ r: 100, g: 150, b: 200 });
+		expect(parsed.frames[0]?.itemType).toBe(5);
+		expect(parsed.frames[0]?.effectColor).toEqual({ r: 100, g: 150, b: 200 });
 	});
 
 	test("should handle GRAPHIC_EFFECT with SPACEDISTORT", () => {
@@ -259,8 +259,8 @@ describe("serializeAniToJson", () => {
 		const json = serializeAniToJson(aniData);
 		const parsed = JSON.parse(json);
 
-		expect(parsed.frames[0]!.itemType).toBe(6);
-		expect(parsed.frames[0]!.effectPos).toEqual({ x: 10, y: -5 });
+		expect(parsed.frames[0]?.itemType).toBe(6);
+		expect(parsed.frames[0]?.effectPos).toEqual({ x: 10, y: -5 });
 	});
 
 	test("should handle imgId = -1 (no image)", () => {
@@ -293,8 +293,8 @@ describe("serializeAniToJson", () => {
 		const json = serializeAniToJson(aniData);
 		const parsed = JSON.parse(json);
 
-		expect(parsed.frames[0]!.imgId).toBe(-1);
-		expect(parsed.frames[0]!.path).toBeUndefined();
+		expect(parsed.frames[0]?.imgId).toBe(-1);
+		expect(parsed.frames[0]?.path).toBeUndefined();
 	});
 
 	test("should handle animation-level LOOP and SHADOW", () => {

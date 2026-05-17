@@ -9,12 +9,12 @@ import type { PvfStringContext } from "./types";
  * - name-list 中每条记录为 [Int:id][String:name] 或 [String:name][Int:id]
  * - String (type 7) 通过 binMap[value] 解析
  *
- * @returns JSON 字符串，解析失败返回 null
+ * @returns 可序列化对象，解析失败返回 null
  */
 export function convertNameList(
 	data: Buffer,
 	ctx: PvfStringContext,
-): string | null {
+): Record<string, string> | null {
 	if (data.length < 4) return null;
 
 	const reader = new BufferReader(data);
@@ -70,5 +70,5 @@ export function convertNameList(
 	for (const { id, name } of entries) {
 		obj[id] = name;
 	}
-	return JSON.stringify(obj, null, 2);
+	return obj;
 }

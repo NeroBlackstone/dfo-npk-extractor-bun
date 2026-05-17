@@ -1,4 +1,4 @@
-import { decoders } from "./decoders";
+import { type ConvertResult, decoders } from "./decoders";
 import type { PvfStringContext } from "./types";
 
 /**
@@ -9,7 +9,7 @@ export function convertFile(
 	data: Buffer,
 	filePath: string,
 	ctx: PvfStringContext,
-): string | Buffer {
+): ConvertResult {
 	const lowerPath = filePath.toLowerCase();
 
 	for (const decoder of decoders) {

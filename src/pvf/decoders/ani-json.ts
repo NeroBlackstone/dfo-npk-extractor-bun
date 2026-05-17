@@ -7,6 +7,9 @@ export function serializeAniToJson(data: AniData): string {
 	return JSON.stringify(aniDataToJson(data), null, 2);
 }
 
+/**
+ * 将 AniData 转换为 JSON-serializable 对象
+ */
 export function aniDataToJson(data: AniData): object {
 	const result: Record<string, unknown> = {
 		framesCount: data.framesCount,
@@ -48,14 +51,20 @@ function frameToJson(frame: AniFrame): object {
 	if (frame.itemType !== 0) result.itemType = frame.itemType;
 	if (frame.effectColor) result.effectColor = frame.effectColor;
 	if (frame.effectPos) result.effectPos = frame.effectPos;
-	if (frame.damageBox.length > 0) result.damageBox = frame.damageBox.map((box) => box.values);
-	if (frame.attackBox.length > 0) result.attackBox = frame.attackBox.map((box) => box.values);
+	if (frame.damageBox.length > 0)
+		result.damageBox = frame.damageBox.map((box) => box.values);
+	if (frame.attackBox.length > 0)
+		result.attackBox = frame.attackBox.map((box) => box.values);
 
 	return result;
 }
 
 function arrayEquals(a: number[], b: number[]): boolean {
-	return JSON.stringify(a) === JSON.stringify(b);
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i++) {
+		if (a[i] !== b[i]) return false;
+	}
+	return true;
 }
 
 function toHexString(value: number): string {
