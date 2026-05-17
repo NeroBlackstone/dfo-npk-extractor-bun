@@ -183,7 +183,11 @@ export function generateTresFromPvf(
 		const framesStr = data.frames
 			.map((frame) => {
 				const imgName = inferImgName(frame.path);
-				const resolvedIndex = resolveFrameIndex(imgName, frame.imgParam, linkMap);
+				const resolvedIndex = resolveFrameIndex(
+					imgName,
+					frame.imgParam,
+					linkMap,
+				);
 				const spritePath = mapAniPathToSpritePath(frame.path, resolvedIndex);
 				const extId = extIdMap.get(spritePath) ?? "1_unknown";
 				return `{\n"duration": ${frame.delay / 100},\n"texture": ExtResource("${extId}")\n}`;

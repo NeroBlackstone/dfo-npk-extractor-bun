@@ -62,7 +62,10 @@ describe("convertNameList", () => {
 		// entries[0] is the first file in the PVF (stringtable.bin or similar)
 		// We need a ScriptFile (0xD0B0) entry - use entries[2] which we know is script
 		const data = await getFileData(entries[2]!);
-		const ctx: PvfStringContext = { binMap: ["test_name"], stringMap: new Map() };
+		const ctx: PvfStringContext = {
+			binMap: ["test_name"],
+			stringMap: new Map(),
+		};
 		const result = convertNameList(data, ctx);
 		// Result should be null or a JSON string depending on content
 		if (result !== null) {

@@ -1,0 +1,13 @@
+[
+  { "name": ["修煉印章"] },
+  { "name2": ["name2_3312"] },
+  { "explain": ["會提供給在公正的決鬥場修練的冒險家的印章。 只要收集這個東西，在公正的決鬥場中便可購買各種道具。"] },
+  { "grade": [1] },
+  { "attach_type": ["[trade delete]"] },
+  { "rarity": [2] },
+  { "usable_job": ["[all]"] },
+  { "minimum_level": [1] },
+  { "icon": ["item/stackable/quest.img", 208] },
+  { "stackable_type": ["[material]", 0] },
+  { "move_wav": ["jewel_touch"] }
+]

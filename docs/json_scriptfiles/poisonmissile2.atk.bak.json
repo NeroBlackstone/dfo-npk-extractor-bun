@@ -1,0 +1,13 @@
+[
+  { "attack_type": ["[magic]"] },
+  { "weapon_damage_apply": [1] },
+  { "attack_enemy": [1] },
+  { "elemental_property": ["[no element]"] },
+  { "damage_reaction": ["[damage]"] },
+  { "push_aside": [50] },
+  { "lift_up": [10] },
+  { "hit_wav": ["blunt_hit"] },
+  { "attack_direction": ["[hit horizon]"] },
+  { "active_status": ["[poison]", 0, 0, 0, 3000] },
+  { "hit_info": ["[blow]", "[no blood]", 50, 1] }
+]

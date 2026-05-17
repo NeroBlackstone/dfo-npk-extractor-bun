@@ -1,0 +1,22 @@
+[
+  {
+    "window": [
+      {
+        "type": ["popup"]
+      },
+      {
+        "tile_type": [1]
+      },
+      {
+        "size": [0, 0]
+      },
+      {
+        "controls": [
+          {
+            "ui_controls": ["[control]", "0", 0, 0, 0, 0, 0]
+          }
+        ]
+      }
+    ]
+  }
+]

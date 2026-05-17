@@ -1,0 +1,11 @@
+[
+  { "name": ["rogue job effect"] },
+  { "grade": [0] },
+  { "attach_type": ["[trade]"] },
+  { "usable_job": ["[thief]"] },
+  { "equipment_type": ["[hat avatar]", 0] },
+  { "sub_type": [0] },
+  { "animation_job": ["[thief]"] },
+  { "layer_variation": [2650, "rogue"] },
+  { "equipment_ani_script": ["equipment/character/thief.lay"] }
+]

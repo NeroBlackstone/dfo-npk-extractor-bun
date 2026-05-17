@@ -1,0 +1,8 @@
+[
+  {
+    "motion": {
+      "base_ani": ["../animation/booster_particle_0.ani"],
+      "sub_ani": ["../animation/booster_particle_1.ani", 0, 1, "../animation/booster_particle_2.ani", 0, 2, "../animation/booster_particle_3.ani", 0, 3, "../animation/booster_particle_4.ani", 0, 4, "../animation/booster_particle_5.ani", 0, 5, "../animation/booster_particle_6.ani", 0, 6, "../animation/booster_particle_7.ani", 0, 7]
+    }
+  }
+]

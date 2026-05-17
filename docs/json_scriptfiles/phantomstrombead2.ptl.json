@@ -1,0 +1,11 @@
+[
+  { "creation_pos": [58, 1, 90] },
+  { "x_axis": null },
+  { "move_type": ["[sin]"] },
+  { "move_type": ["[sin]"] },
+  { "move_variable_1": [80, 80] },
+  { "move_variable_1": [60, 60] },
+  { "move_variable_2": [1200, 1200] },
+  { "move_variable_2": [1200, 1200] },
+  { "z_axis": null }
+]

@@ -1,0 +1,12 @@
+[
+  { "grade": ["[title]"] },
+  { "type": ["[condition under clear]"] },
+  { "sub_type": [6] },
+  { "int_data": [11013, -1] },
+  { "reward_type": ["[item]"] },
+  { "reward_int_data": null },
+  { "reward_selection_int_data": null },
+  {
+    "dialog": [0, 0, 15135, 0, 0, 0, 0, " <apc::26508> 憑我的美貌和實力，竟然被安排在下層， 很傷自尊心呢。 為了我的機關槍，我會上去的。"]
+  }
+]

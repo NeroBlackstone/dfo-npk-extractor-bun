@@ -1,0 +1,18 @@
+[
+  { "damage": [100] },
+  { "damage": [null] },
+  { "attack_type": [null] },
+  { "physic": [null] },
+  { "attack_enemy": [1] },
+  { "elemental_property": [null] },
+  { "no_element": [null] },
+  { "damage_reaction": [null] },
+  { "push_aside": [100] },
+  { "lift_up": [30] },
+  { "attack_direction": [null] },
+  { "hit_horizon": [null] },
+  { "hit_wav": ["falcon_hit"] },
+  { "hit_info": [null] },
+  { "blow": [null] },
+  { "no_blood": [100, 1] }
+]

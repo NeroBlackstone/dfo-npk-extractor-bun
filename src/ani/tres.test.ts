@@ -41,7 +41,9 @@ describe("generateTresFromPvf", () => {
 
 		const content = generateTresFromPvf(anis, new Map(), "");
 
-		expect(content).toContain('[gd_resource type="SpriteFrames" format=3 uid="');
+		expect(content).toContain(
+			'[gd_resource type="SpriteFrames" format=3 uid="',
+		);
 		expect(content).toContain("uid://");
 		expect(content).toContain('id="1_');
 		expect(content).toContain("[resource]");

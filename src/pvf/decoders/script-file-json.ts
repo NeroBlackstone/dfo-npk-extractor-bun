@@ -2,249 +2,32 @@ import type { PvfStringContext } from "../types";
 
 interface Token {
 	type: number;
-	data: number;
+	value: number;
+	floatValue?: number;
+	strValue?: string;
+	listId?: number;
 }
 
-function tokenize(data: Buffer): Token[] {
-	const tokens: Token[] = [];
-	for (let i = 2; i <= data.length - 5; i += 5) {
-		const type = data[i] as number;
-		tokens.push({
-			type,
-			data: data.readInt32LE(i + 1),
-		});
+function formatFloat(value: number): string {
+	const text = value.toString();
+	return text.includes(".") ? text : `${text}.0`;
+}
+
+function normalizeKey(name: string): string {
+	return name.replace(/[\[\]]/g, "").replace(/ /g, "_");
+}
+
+function getSectionName(name: string): string {
+	if (name.startsWith("[/")) {
+		return name.slice(2, -1);
 	}
-	return tokens;
+	return name.replace(/[\[\]]/g, "");
 }
 
-function preScanContainerNames(
-	tokens: Token[],
-	ctx: PvfStringContext,
-): Set<string> {
-	const names = new Set<string>();
-	for (const token of tokens) {
-		if (token.type === 5) {
-			const name = ctx.binMap[token.data] || "";
-			if (name.startsWith("[/") && name.endsWith("]")) {
-				names.add(name.slice(2, -1));
-			}
-		}
-	}
-	return names;
+function isClosingSection(name: string): boolean {
+	return name.startsWith("[/");
 }
 
-function parseLeafValue(
-	token: Token,
-	nextToken: Token | undefined,
-	ctx: PvfStringContext,
-): unknown {
-	switch (token.type) {
-		case 2:
-			return token.data;
-		case 3:
-			return token.data;
-		case 4: {
-			const buf = Buffer.alloc(4);
-			buf.writeInt32LE(token.data, 0);
-			return buf.readFloatLE(0);
-		}
-		case 6: {
-			const str = ctx.binMap[token.data] || "";
-			return str;
-		}
-		case 7: {
-			const str = ctx.binMap[token.data] || "";
-			return str;
-		}
-		case 9: {
-			if (nextToken && nextToken.type === 10) {
-				const listId = token.data;
-				const name = ctx.binMap[nextToken.data] || "";
-				return `@${listId}::${name}`;
-			}
-			return null;
-		}
-		default:
-			return null;
-	}
-}
-
-function findNextSection(
-	tokens: Token[],
-	start: number,
-	end: number,
-): number {
-	for (let i = start; i < end; i++) {
-		const token = tokens[i] as Token;
-		if (token.type === 5) {
-			return i;
-		}
-	}
-	return end;
-}
-
-function parseBody(
-	tokens: Token[],
-	start: number,
-	end: number,
-	containerNames: Set<string>,
-	ctx: PvfStringContext,
-): Array<Record<string, unknown>> {
-	const nodes: Array<Record<string, unknown>> = [];
-	let i = start;
-
-	while (i < end) {
-		const token = tokens[i] as Token;
-
-		if (token.type === 5) {
-			const rawName = ctx.binMap[token.data] || "";
-			// Extract section name: remove [/ ... ] wrapper
-			const sectionName = rawName
-				.replace(/^\[/, "")
-				.replace(/\]$/, "")
-				.replace(/ /g, "_");
-
-			const isContainer = containerNames.has(
-				rawName.startsWith("[/") && rawName.endsWith("]")
-					? rawName.slice(2, -1)
-					: sectionName,
-			);
-
-			if (isContainer) {
-				// Find close tag
-				let closeIdx = i + 1;
-				while (closeIdx < end) {
-					const t = tokens[closeIdx] as Token;
-					if (t.type === 5) {
-						const n = ctx.binMap[t.data] || "";
-						if (n === `[/${sectionName}]` || n === rawName.replace(/^\[/, "[/")) {
-							break;
-						}
-					}
-					closeIdx++;
-				}
-
-				const children = parseBody(
-					tokens,
-					i + 1,
-					closeIdx,
-					containerNames,
-					ctx,
-				);
-
-				// Check for duplicate keys — if any key appears multiple times,
-				// each child becomes a separate array element
-				const keyCount = new Map<string, number>();
-				for (const child of children) {
-					for (const key of Object.keys(child)) {
-						keyCount.set(key, (keyCount.get(key) || 0) + 1);
-					}
-				}
-				const hasDuplicateKeys = [...keyCount.values()].some((c) => c > 1);
-
-				if (hasDuplicateKeys) {
-					// Each child with duplicate keys becomes separate array element
-					const arr: unknown[] = [];
-					for (const child of children) {
-						for (const [key, value] of Object.entries(child)) {
-							if (key !== "_value") {
-								arr.push({ [key]: value });
-							}
-						}
-					}
-					nodes.push({ [sectionName]: arr });
-				} else {
-					// All unique keys: merge into one object
-					const obj: Record<string, unknown> = {};
-					for (const child of children) {
-						for (const [key, value] of Object.entries(child)) {
-							if (key !== "_value") {
-								obj[key] = value;
-							}
-						}
-					}
-					nodes.push({ [sectionName]: [obj] });
-				}
-				i = closeIdx + 1; // skip close tag
-			} else {
-				// Leaf section
-				const sectionEnd = findNextSection(tokens, i + 1, end);
-				const children = parseBody(
-					tokens,
-					i + 1,
-					sectionEnd,
-					containerNames,
-					ctx,
-				);
-
-				if (children.length === 1) {
-					const child = children[0] as Record<string, unknown>;
-					const keys = Object.keys(child);
-					if (keys.length === 1) {
-						nodes.push({ [sectionName]: child[keys[0] as string] });
-					} else {
-						nodes.push({ [sectionName]: child });
-					}
-				} else if (children.length === 0) {
-					nodes.push({ [sectionName]: null });
-				} else {
-					// Flatten: if all children have the same single key pattern,
-					// extract values into array
-					const values: unknown[] = [];
-					for (const child of children) {
-						const keys = Object.keys(child);
-						if (keys.length === 1) {
-							values.push(child[keys[0] as string]);
-						} else {
-							values.push(child);
-						}
-					}
-					// Single value simplification
-					if (values.length === 1) {
-						nodes.push({ [sectionName]: values[0] });
-					} else {
-						nodes.push({ [sectionName]: values });
-					}
-				}
-
-				i = sectionEnd;
-			}
-		} else if (token.type === 8) {
-			// CommandSeparator: discard
-			i++;
-		} else {
-			// Non-section token at body level (e.g. direct values in container)
-			const nextToken = i + 1 < end ? (tokens[i + 1] as Token) : undefined;
-			if (token.type === 9 && nextToken && nextToken.type === 10) {
-				// StringLink pair
-				const listId = token.data;
-				const name = ctx.binMap[nextToken.data] || "";
-				// Find the enclosing section name from recent context
-				// These appear as inline values in a section
-				nodes.push({ _value: `@${listId}::${name}` });
-				i += 2;
-			} else {
-				const val = parseLeafValue(token, nextToken, ctx);
-				if (val !== null) {
-					nodes.push({ _value: val });
-				}
-				i++;
-			}
-		}
-	}
-
-	return nodes;
-}
-
-/**
- * Parse ScriptFile binary token stream to JSON object.
- *
- * Algorithm (from docs/scriptfile-json-spec.md):
- * 1. Flatten 5-byte tokens from offset 2
- * 2. Pre-scan type 5 tokens to identify containers ([/name] close tags)
- * 3. Recursively build tree
- * 4. Merge type 9+10 StringLink pairs
- */
 export function parseScriptFileToJson(
 	data: Buffer,
 	ctx: PvfStringContext,
@@ -253,22 +36,288 @@ export function parseScriptFileToJson(
 		return [];
 	}
 
-	const tokens = tokenize(data);
-	const containerNames = preScanContainerNames(tokens, ctx);
+	const tokens = parseTokens(data, ctx);
+	const closingMap = buildClosingMap(tokens);
+	const sectionMap = buildSectionMap(tokens, closingMap);
 
-	const children = parseBody(tokens, 0, tokens.length, containerNames, ctx);
+	const result = parseSections(tokens, ctx, sectionMap, closingMap, 0);
+	return result;
+}
 
-	// Top level: wrap in array per spec
+function parseTokens(data: Buffer, ctx: PvfStringContext): Token[] {
+	const tokens: Token[] = [];
+
+	for (let index = 2; index < data.length - 4; index += 5) {
+		const type = data[index]!;
+		const value = data.readInt32LE(index + 1);
+
+		const token: Token = { type, value };
+
+		if (type === 4) {
+			token.floatValue = data.readFloatLE(index + 1);
+		} else if (type === 9) {
+			// StringLinkIndex: store the listId for the next type 10 token
+			token.listId = value;
+		} else if (type === 5 || type === 6 || type === 7 || type === 8 || type === 10) {
+			token.strValue = ctx.binMap[value] || "";
+		}
+
+		tokens.push(token);
+	}
+
+	return tokens;
+}
+
+function buildClosingMap(tokens: Token[]): Map<string, number> {
+	const closing = new Map<string, number>();
+	for (let i = 0; i < tokens.length; i++) {
+		const token = tokens[i]!;
+		if (token.type === 5 && token.strValue) {
+			const name = token.strValue;
+			if (isClosingSection(name)) {
+				closing.set(getSectionName(name), i);
+			}
+		}
+	}
+	return closing;
+}
+
+function buildSectionMap(
+	tokens: Token[],
+	closingMap: Map<string, number>,
+): Map<string, { isContainer: boolean; idx: number }> {
+	const sectionMap = new Map<
+		string,
+		{ isContainer: boolean; idx: number }
+	>();
+
+	// First pass: record all opening section tokens
+	for (let i = 0; i < tokens.length; i++) {
+		const token = tokens[i]!;
+		if (token.type === 5 && token.strValue) {
+			const name = token.strValue;
+			if (!isClosingSection(name)) {
+				const cleanName = getSectionName(name);
+				if (!sectionMap.has(cleanName)) {
+					sectionMap.set(cleanName, { isContainer: false, idx: i });
+				}
+			}
+		}
+	}
+
+	// Second pass: determine which are containers
+	for (const [name, info] of sectionMap) {
+		const closingIdx = closingMap.get(name);
+		if (closingIdx !== undefined) {
+			for (let i = info.idx + 1; i < closingIdx; i++) {
+				const token = tokens[i]!;
+				if (token.type === 5 && token.strValue) {
+					const n = token.strValue;
+					if (!isClosingSection(n)) {
+						info.isContainer = true;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	return sectionMap;
+}
+
+function parseSections(
+	tokens: Token[],
+	ctx: PvfStringContext,
+	sectionMap: Map<string, { isContainer: boolean; idx: number }>,
+	closingMap: Map<string, number>,
+	startIdx: number,
+): unknown[] {
 	const result: unknown[] = [];
-	for (const child of children) {
-		for (const [key, value] of Object.entries(child)) {
-			if (key === "_value") {
-				// Bare value at top level — skip or merge into array
+	let i = startIdx;
+
+	while (i < tokens.length) {
+		const token = tokens[i]!;
+
+		if (token.type === 5 && token.strValue) {
+			const name = token.strValue;
+
+			if (isClosingSection(name)) {
+				i++;
 				continue;
 			}
-			result.push({ [key]: value });
+
+			const cleanName = getSectionName(name);
+			const sectionInfo = sectionMap.get(cleanName);
+
+			if (sectionInfo?.isContainer) {
+				const { items, consumed } = parseContainerSection(
+					tokens,
+					i + 1,
+					ctx,
+					sectionMap,
+					closingMap,
+					cleanName,
+				);
+				const value = items.length > 0 ? items : null;
+				result.push({ [normalizeKey(cleanName)]: value });
+				i = consumed;
+			} else {
+				const { values, consumed } = parseLeafSection(
+					tokens,
+					i + 1,
+					ctx,
+					sectionMap,
+					closingMap,
+				);
+				const obj: { [key: string]: unknown } = {};
+				obj[normalizeKey(cleanName)] = values.length > 0 ? values : null;
+				result.push(obj);
+				i = consumed;
+			}
+		} else {
+			i++;
 		}
 	}
 
 	return result;
+}
+
+function parseContainerSection(
+	tokens: Token[],
+	start: number,
+	ctx: PvfStringContext,
+	sectionMap: Map<string, { isContainer: boolean; idx: number }>,
+	closingMap: Map<string, number>,
+	containerName: string,
+): { items: unknown[]; consumed: number } {
+	const items: unknown[] = [];
+	let i = start;
+
+	while (i < tokens.length) {
+		const token = tokens[i]!;
+
+		if (token.type === 5 && token.strValue) {
+			const name = token.strValue;
+
+			if (isClosingSection(name) && getSectionName(name) === containerName) {
+				i++;
+				break;
+			}
+
+			if (isClosingSection(name)) {
+				break;
+			}
+
+			const cleanName = getSectionName(name);
+			const sectionInfo = sectionMap.get(cleanName);
+
+			if (sectionInfo?.isContainer) {
+				const { items: childItems, consumed } = parseContainerSection(
+					tokens,
+					i + 1,
+					ctx,
+					sectionMap,
+					closingMap,
+					cleanName,
+				);
+				const value = childItems.length > 0 ? childItems : null;
+				items.push({ [normalizeKey(cleanName)]: value });
+				i = consumed;
+			} else {
+				const { values, consumed } = parseLeafSection(
+					tokens,
+					i + 1,
+					ctx,
+					sectionMap,
+					closingMap,
+				);
+				const obj: { [key: string]: unknown } = {};
+				obj[normalizeKey(cleanName)] = values.length > 0 ? values : null;
+				items.push(obj);
+				i = consumed;
+			}
+		} else if (token.type !== 8) {
+			const val = tokenToValue(token, ctx, i, tokens);
+			if (val !== undefined) {
+				items.push(val);
+			}
+			i++;
+		} else {
+			i++;
+		}
+	}
+
+	return { items, consumed: i };
+}
+
+function parseLeafSection(
+	tokens: Token[],
+	start: number,
+	ctx: PvfStringContext,
+	sectionMap: Map<string, { isContainer: boolean; idx: number }>,
+	closingMap: Map<string, number>,
+): { values: unknown[]; consumed: number } {
+	const values: unknown[] = [];
+	let i = start;
+
+	while (i < tokens.length) {
+		const token = tokens[i]!;
+
+		if (token.type === 5 && token.strValue) {
+			const name = token.strValue;
+
+			if (isClosingSection(name)) {
+				const name2 = getSectionName(name);
+				const sectionInfo = sectionMap.get(name2);
+				if (sectionInfo?.isContainer) {
+					break;
+				}
+				i++;
+				continue;
+			}
+
+			break;
+		}
+
+		const val = tokenToValue(token, ctx, i, tokens);
+		if (val !== undefined) {
+			values.push(val);
+		}
+		i++;
+	}
+
+	return { values, consumed: i };
+}
+
+function tokenToValue(token: Token, ctx: PvfStringContext, index: number, tokens: Token[]): unknown {
+	switch (token.type) {
+		case 2:
+		case 3:
+			return token.value;
+
+		case 4:
+			return token.floatValue !== undefined ? formatFloat(token.floatValue) : token.value;
+
+		case 6:
+		case 7:
+			return token.strValue || "";
+
+		case 9: {
+			return undefined; // StringLinkIndex is handled by the next type 10 token
+		}
+
+		case 10: {
+			// If previous token was type 9 (StringLinkIndex), combine them
+			const prevToken = index > 0 ? tokens[index - 1] : null;
+			const listId = prevToken?.type === 9 ? prevToken.listId : 0;
+			const keyName = ctx.binMap[token.value] || "";
+			return `@${listId}::${keyName}`;
+		}
+
+		case 8:
+			return undefined;
+
+		default:
+			return undefined;
+	}
 }

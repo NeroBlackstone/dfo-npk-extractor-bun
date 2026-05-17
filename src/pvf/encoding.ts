@@ -3,7 +3,6 @@
 const big5Decoder = new TextDecoder("big5" as any);
 const eucKrDecoder = new TextDecoder("euc-kr" as any);
 
-
 /**
  * 将 buffer 数据用 BIG5 编码解码为 UTF-8 文本
  */

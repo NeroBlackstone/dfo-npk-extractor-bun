@@ -1,0 +1,12 @@
+[
+  { "kind": [4] },
+  { "grade": ["[normal]"] },
+  { "rank_range": [0, 30] },
+  { "rate_range": [0, 101] },
+  { "prev_mission": [34] },
+  { "next_mission": [36] },
+  { "name_text": ["[大將戰]勝利的喜悅1"] },
+  { "cond_text": ["大將戰合計達成50勝"] },
+  { "condition": ["[winning count]", 2, 50, -1] },
+  { "reward_item": [3312, 75] }
+]
