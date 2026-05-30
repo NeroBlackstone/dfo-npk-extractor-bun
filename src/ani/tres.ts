@@ -15,6 +15,7 @@ export interface TresOptions {
 	pvfPath: string;
 	npkDir: string;
 	prefix: string;
+	outputDir: string;
 }
 
 function generateUid(): string {
@@ -207,7 +208,7 @@ export function generateTresFromPvf(
 }
 
 export async function generateTresFiles(options: TresOptions): Promise<void> {
-	const { pvfPath, npkDir, prefix } = options;
+	const { pvfPath, npkDir, prefix, outputDir } = options;
 
 	const imgGroups = await groupPvfAnisByImg(pvfPath);
 
@@ -231,11 +232,11 @@ export async function generateTresFiles(options: TresOptions): Promise<void> {
 
 		const aniNames = anis.map((a) => basename(a.aniPath));
 		console.log(`[${imgName}] ${aniNames.join(", ")}`);
-		const tresPath = join(cwd(), "tres", imgName.replace(".img", ".tres"));
+		const tresPath = join(outputDir, imgName.replace(".img", ".tres"));
 
 		const tresContent = generateTresFromPvf(anis, linkMap, prefix);
 
-		mkdirSync(join(cwd(), "tres"), { recursive: true });
+		mkdirSync(outputDir, { recursive: true });
 		writeFileSync(tresPath, tresContent, "utf-8");
 		console.log(`  -> ${tresPath}`);
 	}

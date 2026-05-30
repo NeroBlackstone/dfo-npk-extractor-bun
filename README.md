@@ -3,7 +3,7 @@
 DFO 跨平台资源包解析器，它可以:
 
 - 将 .npk 文件转换为 PNG 图片和 OGG 音频
-- 解密并提取加密的 .avi 视频文件
+- 解密并提取加密的 .avi 视频文件，将 .avi转为 ogv格式 (需要ffmpeg)
 - 以json格式解压PVF
 - 从 PVF和NPK 生成 Godot .tres SpriteFrames
 
@@ -50,6 +50,9 @@ dfo-extractor npk
 # 解压单个 NPK 文件
 dfo-extractor npk sprite_character_swordman_equipment_avatar_skin.NPK
 
+# 指定输出目录
+dfo-extractor npk sprite_character_swordman_equipment_avatar_skin.NPK --output ./out
+
 # 配合 --link 模式
 dfo-extractor npk --link sprite_character_swordman_equipment_avatar_skin.NPK
 
@@ -58,6 +61,9 @@ dfo-extractor tres --pvf Script.pvf
 
 # 指定 NPK 目录和资源前缀
 dfo-extractor tres --pvf Script.pvf --npk-dir ./npk/ --prefix sprite/
+
+# 指定输出目录
+dfo-extractor tres --pvf Script.pvf --output ./tres/
 
 # 解密并提取 PVF 文件（默认输出到 pvf/ 目录）
 dfo-extractor pvf Script.pvf
@@ -74,20 +80,24 @@ dfo-extractor avi video.avi
 # 解密指定目录的 avi 文件
 dfo-extractor avi ./videos --output ./out
 
-# 递归解密目录
-dfo-extractor avi ./videos --recursive
+# 解密并转换为 ogv 格式（需要 ffmpeg）
+dfo-extractor avi ./videos --ogv
+
 ```
 
 输出结构示例：
-- 图片：`sprite/monster/screamingcave/apopis/(tn)apopis.img/0.png`
-- 音频：`sounds/test/click.ogg`
-- .tres：`tres/sm_body0000.tres`
+- 图片：`output/sprite/monster/screamingcave/apopis/(tn)apopis.img/0.png`
+- 音频：`output/sounds/test/click.ogg`
+- 视频：`output/video/quest_video.avi`（解密后）
+- .tres：`output/tres/sm_body0000.tres`
+- PVF 内容：`output/pvf/Script/skill/list.lst.json`
 
 ### npk 参数
 
 | 参数 | 说明 |
 |------|------|
 | `<file.NPK>` | NPK 文件路径（可选，默认为当前目录） |
+| `--output` | 输出目录（默认 `output/`） |
 | `--link` | 启用 LINK 帧映射模式 |
 
 ### pvf 参数
@@ -95,23 +105,24 @@ dfo-extractor avi ./videos --recursive
 | 参数 | 说明 |
 |------|------|
 | `<file.pvf>` | PVF 文件路径（必填） |
-| `--output` | 输出目录（默认 `pvf/`） |
+| `--output` | 输出目录（默认 `output/tres`） |
 
 ### tres 参数
 
 | 参数 | 说明 |
 |------|------|
-| `--pvf` | PVF 文件路径（必填 |
+| `--pvf` | PVF 文件路径（必填） |
 | `--npk-dir` | NPK 文件目录，用于 LINK 帧解析（默认 cwd） |
 | `--prefix` | .tres 内资源路径的前缀（默认 `sprite/`） |
+| `--output` | 输出目录（默认 `output/pvf`） |
 
 ### avi 参数
 
 | 参数 | 说明 |
 |------|------|
 | `<path>` | avi 文件或目录路径（可选，默认为当前目录） |
-| `--output` | 输出目录（默认 `avi/`） |
-| `--recursive` | 递归处理子目录 |
+| `--output` | 输出目录（默认 `output/video`） |
+| `--ogv` | 解密后转换为 ogv 格式（需要 ffmpeg） |
 
 ## LINK 帧处理
 

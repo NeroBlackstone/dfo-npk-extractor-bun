@@ -1,6 +1,11 @@
 # Changelog
 
-## dev
+## 0.6.0
+
+- 新增avi文件解密
+- 新增avi转ogv
+
+## 0.5.0
 
 - `extract` 子命令更名为 `npk`
 - 新增 `pvf` 子命令，支持解密并提取 PVF 文件（默认输出到 `pvf/` 目录）
@@ -11,7 +16,6 @@
 - `tres` 子命令 `--ani-dir` 更名为 `--npk-dir`，用于指定 NPK 目录（LINK 解析）
 - 修复 PVF 二进制 ANI 资源路径中 null 字符未清除的问题
 - 修复 `buildLinkMap` 中 NPK album 路径大小写不匹配问题
-
 
 ## v0.4.0
 

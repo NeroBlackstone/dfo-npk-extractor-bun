@@ -1,8 +1,6 @@
-import { mkdirSync, readdirSync, statSync } from "node:fs";
-import { dirname, extname, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { generateTresFiles } from "./src/ani/tres";
-import { decryptAvi, isEncryptedAvi } from "./src/avi";
+import { extract as extractAvi } from "./src/avi";
 import { extract } from "./src/npk/extract";
 import { extractPvf } from "./src/pvf";
 
@@ -34,9 +32,9 @@ const { positionals, values } = parseArgs({
 		output: {
 			type: "string",
 		},
-		recursive: {
+		ogv: {
 			type: "boolean",
-			default: true,
+			default: false,
 		},
 	},
 	allowPositionals: true,
@@ -62,8 +60,8 @@ Options:
   --pvf         PVF 文件路径（仅 tres，必选）
   --npk-dir     NPK 文件目录（仅 tres，用于 LINK 解析，默认: cwd）
   --prefix      .tres 内资源路径的前缀（仅 tres，默认: sprite/）
-  --output      输出目录（仅 pvf/avi，默认: pvf 或 avi）
-  --recursive   递归处理目录（仅 avi）
+  --output      输出目录（仅 pvf/avi，默认: pvf 或 video）
+  --ogv         解密后转 Ogg Theora 格式（仅 avi）
 
 Examples:
   dfo-extractor npk                        # 解压 cwd 中所有 npk
@@ -75,7 +73,7 @@ Examples:
   dfo-extractor pvf file.pvf --output ./out
   dfo-extractor avi                        # 解密 cwd 中所有 avi
   dfo-extractor avi video.avi             # 解密单个 avi 文件
-  dfo-extractor avi ./videos --output ./out --recursive
+  dfo-extractor avi ./videos --output ./out
   `.trim(),
 	);
 }
@@ -87,7 +85,7 @@ switch (command) {
 			npkPath: npkFileArg,
 			linkMode: values.link,
 			workDir: WORK_DIR,
-			outputBase: WORK_DIR,
+			outputBase: values.output ?? "output/",
 		});
 		break;
 	}
@@ -102,6 +100,7 @@ switch (command) {
 			pvfPath,
 			npkDir: values["npk-dir"],
 			prefix: values.prefix,
+			outputDir: values.output ?? "output/tres",
 		});
 		break;
 	}
@@ -114,52 +113,16 @@ switch (command) {
 		}
 		await extractPvf({
 			pvfPath: pvfFile,
-			outputDir: values.output ?? "pvf",
+			outputDir: values.output ?? "output/pvf",
 		});
 		break;
 	}
 	case "avi": {
-		const inputPath = resolve(cmdPositionals[0] ?? WORK_DIR);
-		const outputDir = values.output ?? "avi/";
-		const recursive = values.recursive;
-
-		function processAviFile(srcPath: string): void {
-			if (!isEncryptedAvi(srcPath)) {
-				console.log(`跳过非加密 avi: ${srcPath}`);
-				return;
-			}
-
-			// Preserve folder structure: relative path from inputPath
-			const relPath = relative(inputPath, srcPath);
-			const dstPath = join(outputDir, relPath);
-			mkdirSync(dirname(dstPath), { recursive: true });
-			decryptAvi(srcPath, dstPath);
-			console.log(`解密: ${srcPath} -> ${dstPath}`);
-		}
-
-		const stats = statSync(inputPath);
-		if (stats.isFile()) {
-			processAviFile(inputPath);
-		} else if (stats.isDirectory()) {
-			mkdirSync(outputDir, { recursive: true });
-			const entries = readdirSync(inputPath, { recursive });
-			const aviFiles = entries
-				.filter(
-					(f) => typeof f === "string" && extname(f).toLowerCase() === ".avi",
-				)
-				.map((f) => join(inputPath, f as string));
-
-			let count = 0;
-			for (const file of aviFiles) {
-				try {
-					processAviFile(file);
-					count++;
-				} catch (e) {
-					console.error(`处理失败: ${file} - ${e}`);
-				}
-			}
-			console.log(`完成: 解密 ${count} 个文件`);
-		}
+		extractAvi({
+			inputPath: cmdPositionals[0] ?? WORK_DIR,
+			outputDir: values.output ?? "output/video",
+			ogv: values.ogv,
+		});
 		break;
 	}
 	case "help":
