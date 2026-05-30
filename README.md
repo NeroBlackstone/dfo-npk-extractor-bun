@@ -1,6 +1,11 @@
 # dfo-npk-extractor-bun
 
-NPK/PVF 跨平台资源包解析器。将 .npk 文件转换为 PNG 图片和 OGG 音频，从 PVF 生成 Godot .tres SpriteFrames。
+DFO 跨平台资源包解析器，它可以:
+
+- 将 .npk 文件转换为 PNG 图片和 OGG 音频
+- 解密并提取加密的 .avi 视频文件
+- 以json格式解压PVF
+- 从 PVF和NPK 生成 Godot .tres SpriteFrames
 
 ## Disclaimer
 
@@ -40,25 +45,37 @@ bun run build:all
 
 ```bash
 # 解压 NPK（扫描当前目录所有 .npk）
-npk-extractor npk
+dfo-extractor npk
 
 # 解压单个 NPK 文件
-npk-extractor npk sprite_character_swordman_equipment_avatar_skin.NPK
+dfo-extractor npk sprite_character_swordman_equipment_avatar_skin.NPK
 
 # 配合 --link 模式
-npk-extractor npk --link sprite_character_swordman_equipment_avatar_skin.NPK
+dfo-extractor npk --link sprite_character_swordman_equipment_avatar_skin.NPK
 
 # 从 PVF 生成 Godot .tres 文件（结合 NPK 中的 sprite）
-npk-extractor tres --pvf Script.pvf
+dfo-extractor tres --pvf Script.pvf
 
 # 指定 NPK 目录和资源前缀
-npk-extractor tres --pvf Script.pvf --npk-dir ./npk/ --prefix sprite/
+dfo-extractor tres --pvf Script.pvf --npk-dir ./npk/ --prefix sprite/
 
 # 解密并提取 PVF 文件（默认输出到 pvf/ 目录）
-npk-extractor pvf Script.pvf
+dfo-extractor pvf Script.pvf
 
 # 指定输出目录
-npk-extractor pvf Script.pvf --output ./out
+dfo-extractor pvf Script.pvf --output ./out
+
+# 解密当前目录所有 avi 文件（输出到 avi/ 目录）
+dfo-extractor avi
+
+# 解密单个 avi 文件
+dfo-extractor avi video.avi
+
+# 解密指定目录的 avi 文件
+dfo-extractor avi ./videos --output ./out
+
+# 递归解密目录
+dfo-extractor avi ./videos --recursive
 ```
 
 输出结构示例：
@@ -84,9 +101,17 @@ npk-extractor pvf Script.pvf --output ./out
 
 | 参数 | 说明 |
 |------|------|
-| `--pvf` | PVF 文件路径（必填
+| `--pvf` | PVF 文件路径（必填 |
 | `--npk-dir` | NPK 文件目录，用于 LINK 帧解析（默认 cwd） |
 | `--prefix` | .tres 内资源路径的前缀（默认 `sprite/`） |
+
+### avi 参数
+
+| 参数 | 说明 |
+|------|------|
+| `<path>` | avi 文件或目录路径（可选，默认为当前目录） |
+| `--output` | 输出目录（默认 `avi/`） |
+| `--recursive` | 递归处理子目录 |
 
 ## LINK 帧处理
 
@@ -109,7 +134,7 @@ sm_body0000.img/
 生成 `.links.json` 映射文件，跳过 LINK 帧的 PNG 导出：
 
 ```bash
-npk-extractor npk --link
+dfo-extractor npk --link
 ```
 
 生成的文件结构：

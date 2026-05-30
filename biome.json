@@ -1,0 +1,15 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+	"assist": {
+		"enabled": true
+	},
+	"formatter": {
+		"enabled": true
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true
+		}
+	}
+}

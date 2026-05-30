@@ -45,7 +45,12 @@ function frameToJson(frame: AniFrame): object {
 	if (frame.sound !== "") result.sound = frame.sound;
 	if (frame.setFlag !== 0) result.setFlag = frame.setFlag;
 	if (frame.flipType !== 0) result.flipType = frame.flipType;
-	if (frame.clip[0] !== 0 || frame.clip[1] !== 0 || frame.clip[2] !== 0 || frame.clip[3] !== 0)
+	if (
+		frame.clip[0] !== 0 ||
+		frame.clip[1] !== 0 ||
+		frame.clip[2] !== 0 ||
+		frame.clip[3] !== 0
+	)
 		result.clip = frame.clip;
 	if (frame.loopStart !== false) result.loopStart = frame.loopStart;
 	if (frame.loopEnd !== 0) result.loopEnd = frame.loopEnd;

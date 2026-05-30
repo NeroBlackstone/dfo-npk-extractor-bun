@@ -1,5 +1,8 @@
+import { mkdirSync, readdirSync, statSync } from "node:fs";
+import { basename, extname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { generateTresFiles } from "./src/ani/tres";
+import { decryptAvi, isEncryptedAvi } from "./src/avi";
 import { extract } from "./src/npk/extract";
 import { extractPvf } from "./src/pvf";
 
@@ -30,7 +33,10 @@ const { positionals, values } = parseArgs({
 		},
 		output: {
 			type: "string",
-			default: "pvf",
+		},
+		recursive: {
+			type: "boolean",
+			default: false,
 		},
 	},
 	allowPositionals: true,
@@ -42,12 +48,13 @@ const [command, ...cmdPositionals] = positionals;
 function showHelp() {
 	console.log(
 		`
-npk-extractor <command> [options]
+dfo-extractor <command> [options]
 
 Commands:
   npk       从 NPK 文件解压 sprite/audio
   tres      从 PVF 读取二进制 .ani，结合 NPK 生成 .tres
   pvf       解密并提取 PVF 文件中的内容
+  avi       解密加密的 avi 视频文件
 
 Options:
   --help        显示帮助
@@ -55,16 +62,20 @@ Options:
   --pvf         PVF 文件路径（仅 tres，必选）
   --npk-dir     NPK 文件目录（仅 tres，用于 LINK 解析，默认: cwd）
   --prefix      .tres 内资源路径的前缀（仅 tres，默认: sprite/）
-  --output      输出目录（仅 pvf，默认: pvf）
+  --output      输出目录（仅 pvf/avi，默认: pvf 或 avi）
+  --recursive   递归处理目录（仅 avi）
 
 Examples:
-  npk-extractor npk                        # 解压 cwd 中所有 npk
-  npk-extractor npk some.npk               # 解压单个 npk
-  npk-extractor npk --link                # 带 link 模式解压
-  npk-extractor tres --pvf character.pvf   # 从 PVF 生成 .tres
-  npk-extractor tres --pvf f.pvf --npk-dir ./npk/ --prefix sprite/
-  npk-extractor pvf file.pvf               # 提取 PVF 所有文件到 pvf/
-  npk-extractor pvf file.pvf --output ./out
+  dfo-extractor npk                        # 解压 cwd 中所有 npk
+  dfo-extractor npk some.npk               # 解压单个 npk
+  dfo-extractor npk --link                # 带 link 模式解压
+  dfo-extractor tres --pvf character.pvf   # 从 PVF 生成 .tres
+  dfo-extractor tres --pvf f.pvf --npk-dir ./npk/ --prefix sprite/
+  dfo-extractor pvf file.pvf               # 提取 PVF 所有文件到 pvf/
+  dfo-extractor pvf file.pvf --output ./out
+  dfo-extractor avi                        # 解密 cwd 中所有 avi
+  dfo-extractor avi video.avi             # 解密单个 avi 文件
+  dfo-extractor avi ./videos --output ./out --recursive
   `.trim(),
 	);
 }
@@ -103,8 +114,50 @@ switch (command) {
 		}
 		await extractPvf({
 			pvfPath: pvfFile,
-			outputDir: values.output,
+			outputDir: values.output ?? "pvf",
 		});
+		break;
+	}
+	case "avi": {
+		const inputPath = cmdPositionals[0] ?? WORK_DIR;
+		const outputDir = values.output ?? "avi/";
+		const recursive = values.recursive;
+
+		function processAviFile(srcPath: string): void {
+			if (!isEncryptedAvi(srcPath)) {
+				console.log(`跳过非加密 avi: ${srcPath}`);
+				return;
+			}
+
+			const dstPath = join(outputDir, basename(srcPath));
+			mkdirSync(outputDir, { recursive: true });
+			decryptAvi(srcPath, dstPath);
+			console.log(`解密: ${srcPath} -> ${dstPath}`);
+		}
+
+		const stats = statSync(inputPath);
+		if (stats.isFile()) {
+			processAviFile(inputPath);
+		} else if (stats.isDirectory()) {
+			mkdirSync(outputDir, { recursive: true });
+			const entries = readdirSync(inputPath, { recursive });
+			const aviFiles = entries
+				.filter(
+					(f) => typeof f === "string" && extname(f).toLowerCase() === ".avi",
+				)
+				.map((f) => join(inputPath, f as string));
+
+			let count = 0;
+			for (const file of aviFiles) {
+				try {
+					processAviFile(file);
+					count++;
+				} catch (e) {
+					console.error(`处理失败: ${file} - ${e}`);
+				}
+			}
+			console.log(`完成: 解密 ${count} 个文件`);
+		}
 		break;
 	}
 	case "help":
