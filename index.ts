@@ -1,5 +1,5 @@
 import { mkdirSync, readdirSync, statSync } from "node:fs";
-import { basename, extname, join } from "node:path";
+import { dirname, extname, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { generateTresFiles } from "./src/ani/tres";
 import { decryptAvi, isEncryptedAvi } from "./src/avi";
@@ -36,7 +36,7 @@ const { positionals, values } = parseArgs({
 		},
 		recursive: {
 			type: "boolean",
-			default: false,
+			default: true,
 		},
 	},
 	allowPositionals: true,
@@ -119,7 +119,7 @@ switch (command) {
 		break;
 	}
 	case "avi": {
-		const inputPath = cmdPositionals[0] ?? WORK_DIR;
+		const inputPath = resolve(cmdPositionals[0] ?? WORK_DIR);
 		const outputDir = values.output ?? "avi/";
 		const recursive = values.recursive;
 
@@ -129,8 +129,10 @@ switch (command) {
 				return;
 			}
 
-			const dstPath = join(outputDir, basename(srcPath));
-			mkdirSync(outputDir, { recursive: true });
+			// Preserve folder structure: relative path from inputPath
+			const relPath = relative(inputPath, srcPath);
+			const dstPath = join(outputDir, relPath);
+			mkdirSync(dirname(dstPath), { recursive: true });
 			decryptAvi(srcPath, dstPath);
 			console.log(`解密: ${srcPath} -> ${dstPath}`);
 		}
