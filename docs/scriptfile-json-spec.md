@@ -2,6 +2,8 @@
 
 PVF ScriptFile 二进制 token 流到 JSON 树的序列化规范。
 
+> 配套阅读：[`pvf-i18n.md`](./pvf-i18n.md) — `type 9 + type 10`（StringLink + StringLinkIndex）如何实现多语言 key 引用与翻译替换。
+
 ## 核心概念
 
 - **section 块**：一个独立 section 的完整内容，包含其所有子节点和值

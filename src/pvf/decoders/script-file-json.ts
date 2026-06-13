@@ -1,5 +1,10 @@
 import type { PvfStringContext } from "../types";
 
+export interface ScriptFileParseOptions {
+	/** 是否将 StringLink 解析为实际翻译文本（默认 false，输出 @listId::keyName） */
+	resolveStringLink?: boolean;
+}
+
 interface Token {
 	type: number;
 	value: number;
@@ -31,16 +36,18 @@ function isClosingSection(name: string): boolean {
 export function parseScriptFileToJson(
 	data: Buffer,
 	ctx: PvfStringContext,
+	options?: ScriptFileParseOptions,
 ): unknown[] {
 	if (data.length < 7) {
 		return [];
 	}
 
+	const resolveStringLink = options?.resolveStringLink ?? false;
 	const tokens = parseTokens(data, ctx);
 	const closingMap = buildClosingMap(tokens);
 	const sectionMap = buildSectionMap(tokens);
 
-	return parseSections(tokens, ctx, sectionMap, closingMap, 0);
+	return parseSections(tokens, ctx, sectionMap, closingMap, 0, resolveStringLink);
 }
 
 function parseTokens(data: Buffer, ctx: PvfStringContext): Token[] {
@@ -148,6 +155,7 @@ function parseSections(
 	sectionMap: Map<string, { isContainer: boolean; idx: number }>,
 	closingMap: Map<string, number>,
 	startIdx: number,
+	resolveStringLink: boolean,
 ): unknown[] {
 	const result: unknown[] = [];
 	let i = startIdx;
@@ -178,6 +186,7 @@ function parseSections(
 					sectionMap,
 					closingMap,
 					cleanName,
+					resolveStringLink,
 				);
 				const value = items.length > 0 ? items : null;
 				result.push({ [normalizeKey(cleanName)]: value });
@@ -188,6 +197,7 @@ function parseSections(
 					i + 1,
 					ctx,
 					sectionMap,
+					resolveStringLink,
 				);
 				const obj: { [key: string]: unknown } = {};
 				obj[normalizeKey(cleanName)] = values.length > 0 ? values : null;
@@ -209,6 +219,7 @@ function parseContainerSection(
 	sectionMap: Map<string, { isContainer: boolean; idx: number }>,
 	closingMap: Map<string, number>,
 	containerName: string,
+	resolveStringLink: boolean,
 ): { items: unknown[]; consumed: number } {
 	const items: unknown[] = [];
 	let i = start;
@@ -243,6 +254,7 @@ function parseContainerSection(
 					sectionMap,
 					closingMap,
 					cleanName,
+					resolveStringLink,
 				);
 				const value = childItems.length > 0 ? childItems : null;
 				items.push({ [normalizeKey(cleanName)]: value });
@@ -253,6 +265,7 @@ function parseContainerSection(
 					i + 1,
 					ctx,
 					sectionMap,
+					resolveStringLink,
 				);
 				const obj: { [key: string]: unknown } = {};
 				obj[normalizeKey(cleanName)] = values.length > 0 ? values : null;
@@ -260,7 +273,7 @@ function parseContainerSection(
 				i = consumed;
 			}
 		} else {
-			const val = tokenToValue(token, ctx, i, tokens);
+			const val = tokenToValue(token, ctx, i, tokens, resolveStringLink);
 			if (val !== undefined) {
 				items.push(val);
 			}
@@ -276,6 +289,7 @@ function parseLeafSection(
 	start: number,
 	ctx: PvfStringContext,
 	sectionMap: Map<string, { isContainer: boolean; idx: number }>,
+	resolveStringLink: boolean,
 ): { values: unknown[]; consumed: number } {
 	const values: unknown[] = [];
 	let i = start;
@@ -303,7 +317,7 @@ function parseLeafSection(
 			break;
 		}
 
-		const val = tokenToValue(token, ctx, i, tokens);
+		const val = tokenToValue(token, ctx, i, tokens, resolveStringLink);
 		if (val !== undefined) {
 			values.push(val);
 		}
@@ -318,6 +332,7 @@ function tokenToValue(
 	ctx: PvfStringContext,
 	index: number,
 	tokens: Token[],
+	resolveStringLink: boolean,
 ): unknown {
 	switch (token.type) {
 		case 2:
@@ -342,6 +357,15 @@ function tokenToValue(
 			const prevToken = index > 0 ? tokens[index - 1] : null;
 			const listId = prevToken?.type === 9 ? prevToken.listId : 0;
 			const keyName = ctx.binMap[token.value] || "";
+
+			// 尝试解析实际翻译
+			if (resolveStringLink && ctx.translationsByListId && listId > 0) {
+				const translations = ctx.translationsByListId.get(listId);
+				if (translations?.has(keyName)) {
+					return translations.get(keyName)!;
+				}
+			}
+
 			return `@${listId}::${keyName}`;
 		}
 

@@ -135,3 +135,81 @@ export async function parseNStringLst(
 
 	return result;
 }
+
+/**
+ * 解析 n_string.lst 并返回按 listId 分组的翻译映射
+ * @returns [listIdToFile, translationsByListId]
+ */
+export async function parseNStringLstByListId(
+	data: Buffer,
+	stringBinMap: string[],
+	resolveFile: (name: string) => Promise<Buffer | null>,
+): Promise<{
+	listIdToFile: Map<number, string>;
+	translationsByListId: Map<number, Map<string, string>>;
+}> {
+	const listIdToFile = new Map<number, string>();
+	const translationsByListId = new Map<number, Map<string, string>>();
+
+	if (data.length < N_STRING_MAGIC_SIZE) {
+		return { listIdToFile, translationsByListId };
+	}
+
+	const reader = new BufferReader(data);
+	const magicNumber = reader.readUint16();
+	if (magicNumber !== N_STRING_MAGIC) {
+		return { listIdToFile, translationsByListId };
+	}
+
+	// 收集所有 index（保留顺序以确定 listId）
+	const indices: number[] = [];
+	while (reader.getRemaining() >= N_STRING_ENTRY_SIZE) {
+		reader.setOffset(reader.getOffset() + N_STRING_RECORD_HEADER_SIZE);
+		const index = reader.readInt32();
+		if (index >= 0 && index < stringBinMap.length) {
+			indices.push(index);
+		}
+	}
+
+	// 按 index 去重文件名，同时建立 listId → 文件名映射
+	const uniqueIndices = [...new Set(indices)];
+	const fileNames = uniqueIndices
+		.map((i) => stringBinMap[i] ?? "")
+		.filter(Boolean);
+
+	// 并发读取所有 .str 文件
+	const CONCURRENCY = 64;
+	const fileDataMap = new Map<string, Buffer | null>();
+	for (let i = 0; i < fileNames.length; i += CONCURRENCY) {
+		const chunk = fileNames.slice(i, i + CONCURRENCY);
+		const dataList = await Promise.all(chunk.map((name) => resolveFile(name)));
+		for (let j = 0; j < chunk.length; j++) {
+			const name = chunk[j];
+			if (name !== undefined) {
+				// 存储原始大小写和小写两种 key
+				fileDataMap.set(name, dataList[j] ?? null);
+				fileDataMap.set(name.toLowerCase(), dataList[j] ?? null);
+			}
+		}
+	}
+
+	// 建立 listId → 文件名映射，并按 listId 分组解析翻译
+	for (let listId = 0; listId < uniqueIndices.length; listId++) {
+		const index = uniqueIndices[listId];
+		if (index === undefined) continue;
+		const strFileName = stringBinMap[index];
+		if (!strFileName) continue;
+
+		listIdToFile.set(listId, strFileName);
+
+		// 尝试多种 key 查找文件数据（原始大小写和小写）
+		const fileData = fileDataMap.get(strFileName) ?? fileDataMap.get(strFileName.toLowerCase());
+		if (!fileData || fileData.length === 0) continue;
+
+		const content = decodeAuto(fileData);
+		const kvMap = parseStrContent(content);
+		translationsByListId.set(listId, kvMap);
+	}
+
+	return { listIdToFile, translationsByListId };
+}

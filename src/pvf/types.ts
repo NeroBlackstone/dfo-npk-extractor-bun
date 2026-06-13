@@ -44,4 +44,8 @@ export interface PvfFileEntry {
 export interface PvfStringContext {
 	binMap: string[];
 	stringMap: Map<string, string>;
+	/** listId → .str 文件名映射（来自 n_string.lst） */
+	listIdToFile?: Map<number, string>;
+	/** listId → key>value 翻译映射（按 listId 分组的翻译） */
+	translationsByListId?: Map<number, Map<string, string>>;
 }

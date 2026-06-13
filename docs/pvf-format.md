@@ -2,6 +2,8 @@
 
 PVF（Package Virtual File System）是 DNF 用于存储游戏配置、脚本、字符串表等数据的打包格式。PVF 文件内部使用自定义的加密和编码机制。
 
+> 配套阅读：[`pvf-i18n.md`](./pvf-i18n.md) — 字符串池、`.str` 翻译表、ScriptFile StringLink 的完整 i18n 机制。
+
 ## PVF 文件整体结构
 
 ```

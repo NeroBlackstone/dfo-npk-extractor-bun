@@ -3,6 +3,7 @@ import { generateTresFiles } from "./src/ani/tres";
 import { extract as extractAvi } from "./src/avi";
 import { extract } from "./src/npk/extract";
 import { extractPvf } from "./src/pvf";
+import { generateItemList } from "./src/pvf/item-list";
 
 const WORK_DIR = ".";
 
@@ -36,6 +37,10 @@ const { positionals, values } = parseArgs({
 			type: "boolean",
 			default: false,
 		},
+		"resolve-string-link": {
+			type: "boolean",
+			default: false,
+		},
 	},
 	allowPositionals: true,
 	strict: true,
@@ -52,16 +57,18 @@ Commands:
   npk       从 NPK 文件解压 sprite/audio
   tres      从 PVF 读取二进制 .ani，结合 NPK 生成 .tres
   pvf       解密并提取 PVF 文件中的内容
+  list      从 PVF 导出物品 ID 到名称的 CSV
   avi       解密加密的 avi 视频文件
 
 Options:
   --help        显示帮助
   --link        启用 LINK 帧映射模式（仅 npk）
-  --pvf         PVF 文件路径（仅 tres，必选）
+  --pvf         PVF 文件路径（仅 tres/list，必选）
   --npk-dir     NPK 文件目录（仅 tres，用于 LINK 解析，默认: cwd）
   --prefix      .tres 内资源路径的前缀（仅 tres，默认: sprite/）
-  --output      输出目录（仅 pvf/avi，默认: pvf 或 video）
+  --output      输出目录（仅 pvf/avi/list，默认: pvf/video）
   --ogv         解密后转 Ogg Theora 格式（仅 avi）
+  --resolve-string-link  将 @listId::keyName 解析为实际翻译文本（仅 pvf）
 
 Examples:
   dfo-extractor npk                        # 解压 cwd 中所有 npk
@@ -71,6 +78,9 @@ Examples:
   dfo-extractor tres --pvf f.pvf --npk-dir ./npk/ --prefix sprite/
   dfo-extractor pvf file.pvf               # 提取 PVF 所有文件到 pvf/
   dfo-extractor pvf file.pvf --output ./out
+  dfo-extractor pvf file.pvf --resolve-string-link  # 提取并解析翻译
+  dfo-extractor list file.pvf              # 导出物品 ID => 名称 CSV
+  dfo-extractor list file.pvf --output ./items.csv
   dfo-extractor avi                        # 解密 cwd 中所有 avi
   dfo-extractor avi video.avi             # 解密单个 avi 文件
   dfo-extractor avi ./videos --output ./out
@@ -114,6 +124,21 @@ switch (command) {
 		await extractPvf({
 			pvfPath: pvfFile,
 			outputDir: values.output ?? "output/pvf",
+			resolveStringLink: values["resolve-string-link"],
+		});
+		break;
+	}
+	case "list": {
+		const pvfFile = cmdPositionals[0];
+		if (!pvfFile) {
+			console.error("Error: 请指定 PVF 文件路径");
+			showHelp();
+			process.exit(1);
+		}
+		await generateItemList({
+			pvfPath: pvfFile,
+			outputPath: values.output,
+			outputDir: "output",
 		});
 		break;
 	}

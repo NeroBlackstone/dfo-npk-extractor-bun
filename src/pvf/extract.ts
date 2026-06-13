@@ -13,6 +13,8 @@ export interface PvfExtractOptions {
 	pvfPath: string;
 	/** 输出目录 */
 	outputDir: string;
+	/** 是否将 StringLink 解析为实际翻译文本 */
+	resolveStringLink?: boolean;
 }
 
 /** 并发处理上限 */
@@ -25,7 +27,7 @@ export async function extractPvf(options: PvfExtractOptions): Promise<{
 	extractedCount: number;
 	entries: PvfFileEntry[];
 }> {
-	const { pvfPath, outputDir } = options;
+	const { pvfPath, outputDir, resolveStringLink = false } = options;
 	console.log(`Reading PVF: ${pvfPath}`);
 	const { header, entries, getFileData } = await readPvf(pvfPath);
 
@@ -39,6 +41,10 @@ export async function extractPvf(options: PvfExtractOptions): Promise<{
 	}
 
 	const strCtx = await buildStringContext(entryByPath, getFileData);
+
+	if (resolveStringLink) {
+		console.log(`StringLink resolution enabled: will resolve @listId::key to actual translations`);
+	}
 
 	// 预先创建所有需要的目录
 	const dirsToCreate = new Set<string>();
@@ -83,7 +89,7 @@ export async function extractPvf(options: PvfExtractOptions): Promise<{
 			lowerPath2.endsWith(".ani");
 		const outPath = `${outputDir}/${safePath}${isJsonOutput ? ".json" : ""}`;
 
-		const outputData = convertFile(data, entry.filePath, strCtx);
+		const outputData = convertFile(data, entry.filePath, strCtx, { resolveStringLink });
 		return { path: outPath, data: outputData };
 	}
 

@@ -65,13 +65,19 @@ dfo-extractor tres --pvf Script.pvf --npk-dir ./npk/ --prefix sprite/
 # 指定输出目录
 dfo-extractor tres --pvf Script.pvf --output ./tres/
 
-# 解密并提取 PVF 文件（默认输出到 pvf/ 目录）
+# 解密并提取 PVF 文件（默认输出到 out/pvf/ 目录）
 dfo-extractor pvf Script.pvf
 
 # 指定输出目录
 dfo-extractor pvf Script.pvf --output ./out
 
-# 解密当前目录所有 avi 文件（输出到 avi/ 目录）
+# 提取并解析翻译（将 @listId::keyName 替换为实际翻译文本）
+dfo-extractor pvf Script.pvf --resolve-string-link
+
+# 导出物品 ID => 名称的 CSV
+dfo-extractor list Script.pvf
+
+# 解密当前目录所有 avi 文件（输出到 out/avi/ 目录）
 dfo-extractor avi
 
 # 解密单个 avi 文件
@@ -105,7 +111,15 @@ dfo-extractor avi ./videos --ogv
 | 参数 | 说明 |
 |------|------|
 | `<file.pvf>` | PVF 文件路径（必填） |
-| `--output` | 输出目录（默认 `output/tres`） |
+| `--output` | 输出目录（默认 `output/pvf`） |
+| `--resolve-string-link` | 将 `@listId::keyName` 解析为实际翻译文本 |
+
+### list 参数
+
+| 参数 | 说明 |
+|------|------|
+| `<file.pvf>` | PVF 文件路径（必填） |
+| `--output` | 输出文件路径（默认 `output/item-list.csv`） |
 
 ### tres 参数
 
