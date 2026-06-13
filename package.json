@@ -1,14 +1,31 @@
 {
-	"name": "dfo-npk-extractor-bun",
-	"version": "0.4.0",
+	"name": "dfo-extractor",
+	"version": "0.7.0",
+	"description": "DFO (Dungeon & Fighters) NPK/PVF/AVI 文件提取工具",
 	"module": "index.ts",
 	"type": "module",
-	"private": true,
+	"bin": {
+		"dfo-extractor": "./bin/cli"
+	},
+	"files": [
+		"bin",
+		"index.ts",
+		"src"
+	],
 	"scripts": {
 		"fmt": "biome check --write .",
 		"build": "bun build --compile index.ts --outfile dist/dfo-extractor",
 		"build:all": "bun build --compile index.ts --outfile dist/dfo-extractor-linux-x64-glibc --target bun-linux-x64 && bun build --compile index.ts --outfile dist/dfo-extractor-linux-arm64-glibc --target bun-linux-arm64 && bun build --compile index.ts --outfile dist/dfo-extractor-linux-x64-musl --target bun-linux-x64-musl && bun build --compile index.ts --outfile dist/dfo-extractor-linux-arm64-musl --target bun-linux-arm64-musl && bun build --compile index.ts --outfile dist/dfo-extractor-windows-x64.exe --target bun-windows-x64 && bun build --compile index.ts --outfile dist/dfo-extractor-windows-arm64.exe --target bun-windows-arm64 && bun build --compile index.ts --outfile dist/dfo-extractor-darwin-x64 --target bun-darwin-x64 && bun build --compile index.ts --outfile dist/dfo-extractor-darwin-arm64 --target bun-darwin-arm64"
 	},
+	"keywords": [
+		"dfo",
+		"dnf",
+		"npk",
+		"pvf",
+		"extractor",
+		"dungeon-fighters"
+	],
+	"license": "MIT",
 	"devDependencies": {
 		"@biomejs/biome": "2.4.15",
 		"@types/bun": "latest"
